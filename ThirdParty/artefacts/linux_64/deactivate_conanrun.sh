@@ -1,0 +1,1 @@
+. "/home/coldelectrons/projects/thedarkmod-vr/darkmod_src.xr/ThirdParty/artefacts/linux_64/deactivate_conanrunenv-debug-x86_64.sh"

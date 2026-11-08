@@ -9,4 +9,4 @@ build*/
 ipch/
 Darkmod.log
 
-ThirdParty/artefacts/
+#ThirdParty/artefacts/

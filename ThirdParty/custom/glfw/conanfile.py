@@ -34,8 +34,8 @@ class GlfwConan(ConanFile):
         "shared": False,
         "fPIC": True,
         "vulkan_static": False,
-        "with_x11": True,
-        "with_wayland": False,
+        "with_x11": False,
+        "with_wayland": True,
     }
 
     # thedarkmod: we assume that X11, wayland, xcbcommon are available in the environment and are linked explicitly
@@ -80,7 +80,7 @@ class GlfwConan(ConanFile):
         self.requires("opengl/system", libs=False, transitive_headers=True)
         if self.options.get_safe("vulkan_static"):
             self.requires("vulkan-loader/1.3.268.0")
-        
+
         if self.settings.os in ["Linux", "FreeBSD"]:
             if self.with_x11_package:
                 self.requires("xorg/system")
