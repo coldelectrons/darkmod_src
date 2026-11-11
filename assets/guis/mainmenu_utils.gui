@@ -1,0 +1,246 @@
+/* =============================================================================================
+ *
+ * This file is part of The Dark Mod's Main Menu GUI
+ *
+ * Mission Authors: DO NOT EDIT, INCLUDE OR OVERRIDE THIS FILE IN YOUR MISSION PK4.
+ *
+ * greebo: This file contains a bunch of scrips and general GUI events for the main menu.
+ * This code is #included in the actual mainmenu.gui's Desktop, hence no surrounding windowDef.
+ *
+ * ============================================================================================= */
+
+/**
+ * greebo: This is a "switch" windowDef called each time
+ * the main menu is switching modes, i.e. from mainmenu to
+ * briefing, from briefing to mod select, etc.
+ *
+ * The current mode is stored in the GUI state variable "gui::mode",
+ * which can take values defined by the MM_STATE_* constants.
+ *
+ * The mode to be switched to is defined in "gui::targetmode"
+ */
+windowDef MainMenuModeSelect 
+{
+	rect 0,0,0,0
+	visible 1
+	notime 1
+
+	onTime 0
+	{
+		set "cmd" "log 'MainMenuModeSelect called.'";
+		set "cmd" "mainmenumodeselect";
+	}
+}
+
+/**
+ * This windowDef gets executed exactly once when the main menu is displayed for the first time.
+ */
+windowDef MainMenuStartUp
+{
+	rect	0, 0, 0, 0
+	visible	1
+	notime	1
+
+	//stgatilov: use onActivate instead of onTime 0 to trigger initialization
+	//onTime 0 events can trigger before activation on engine restart, with all GUI cmds suppressed
+	onActivate {
+		set "cmd" "log 'MainMenuStartUp activated.'"; 
+		resetTime 0;
+	}
+
+	onTime 0 {
+		// Avoid double-entering this function
+		if ("gui::MainMenuInitialised" == 0)
+		{
+			set "cmd" "log 'MainMenuStartup called.'"; 
+
+			// Select the proper menu
+			set "MainMenuModeSelect::notime" "0";
+			resetTime "MainMenuModeSelect" 0;
+
+			// Start the music
+			set "MainMenuMusicSelect::notime" "0";
+			resetTime "MainMenuMusicSelect" 0;
+
+			set "gui::MainMenuInitialised" 1;
+
+			// Issue the initialise command
+			set "cmd" "mainMenuStartup";
+
+			// Update the video settings tab
+			set "cmd" "loadCustomVideoResolution";
+
+			if ("gui::reload" == 0)
+			{
+				// Load the Audio Settings tab by default
+				set "gui::settingspage" SETTINGS_PAGE_AUDIO;
+			}
+			else
+			{
+				// Tels: Upon reload, load the General Video Settings tab
+				set "gui::settingspage" SETTINGS_PAGE_VIDEO;
+			}
+
+			set "SettingsPageSelect::notime" "0";
+			resetTime "SettingsPageSelect" 0;
+			set "gui::vrsettingspage" VRSETTINGS_PAGE_GENERAL;
+
+			set "VRSettingsPageSelect::notime" "0";
+			resetTime "VRSettingsPageSelect" 0;
+
+			// Load the controls/movement page by default
+			set "gui::controlspage" CONTROLS_PAGE_MOVEMENT;
+
+			set "SettingsControlsPageSelect::notime" "0";
+			resetTime "SettingsControlsPageSelect" 0;
+
+			// Load the briefing and debriefing video defs into the GUI state variables
+			set "cmd" "loadVideoDefinitions";
+
+			// stgatilov: fade in the whole menu from black screen
+			set "BlackFade::visible" 1;
+			resetTime "BlackFade" 0;
+
+			set "cmd" "log 'MainMenuStartup done.'"; 
+		}
+	}
+}
+
+// Entry point for the SDK code, gets called on mission success
+onNamedEvent ShowPostMissionScreen
+{
+	set "cmd" "log 'ShowPostMissionScreen called.'";
+
+	// Check if we have a de-briefing for this mission
+	// This bool is set by the SDK code before calling this event
+	if ("gui::HasDebriefingVideo")
+	{
+		// Switch to the debriefing video
+		set "gui::targetmode" MM_STATE_DEBRIEFING_VIDEO;
+		resetTime "MainMenuModeSelect" 0;	
+	}
+	else
+	{
+		// Switch to the success screen
+		set "gui::targetmode" MM_STATE_SUCCESS;
+		resetTime "MainMenuModeSelect" 0;
+	}
+}
+
+// gets called by the SDK to close the success screen GUI
+onNamedEvent HideSuccessScreen
+{
+	set "cmd" "log 'HideSuccessScreen called.'";
+
+	// Switch to the main menu
+	set "gui::targetmode" MM_STATE_MAINMENU;
+	resetTime "MainMenuModeSelect" 0;
+}
+
+onEsc
+{
+	set "cmd" "log 'ESC pressed.'"; 
+
+	// Skip the briefing if playing
+	if ("gui::BriefingIsPlaying" == 1)
+	{
+		set "cmd" "log 'ESC == stopping briefing.'"; 
+
+		set "BriefingSkip::notime" "0";
+		resetTime "BriefingSkip" 0;
+	}
+	else if ("gui::ingame")
+	{
+		set "cmd" "log 'In-Game menu: ESC issuing close command.'"; 
+
+		// If no briefing is playing, just propagate the close command
+		set "cmd" "close";
+	}
+	else if ("gui::BriefingVideoPlaying" == 1) // Skip the briefing video if playing
+	{
+		set "cmd" "log 'ESC == stopping briefing video.'"; 
+
+		// Play the sound and switch to the briefing screen
+		set "cmd" "play sound/meta/menu/mnu_select;";
+
+		// Go to briefing text
+		set "gui::targetmode" MM_STATE_FORWARD;
+		resetTime "MainMenuModeSelect" 0;
+	}
+	else if ("gui::DebriefingVideoPlaying" == 1) // Skip the debriefing video if playing
+	{
+		set "cmd" "log 'ESC == stopping debriefing video.'"; 
+
+		// Play the sound and switch to the success screen
+		set "cmd" "play sound/meta/menu/mnu_select;";
+
+		// Go to success screen
+		set "gui::targetmode" MM_STATE_FORWARD;
+		resetTime "MainMenuModeSelect" 0;
+	}
+	else if ("gui::mode" == MM_STATE_SUCCESS)
+	{
+		// We're in the success screen, inhibit ESC completely
+		set "cmd" "log 'ESC inhibited during success screen.'";
+	}
+	else // not in-game
+	{
+		set "cmd" "log 'Main menu: ESC leads back to main menu.'"; 
+
+		set "cmd" "play sound/meta/menu/mnu_select";
+
+		// Switch to the main menu
+		set "gui::targetmode" MM_STATE_MAINMENU;
+		resetTime "MainMenuModeSelect" 0;
+	}
+}
+
+// greebo: Sends a command to the SDK every 10 msecs.
+windowDef HeartBeat
+{
+	rect	0,0,0,0
+	visible	1
+
+	onTime 10
+	{
+		// greebo: Send an "heartbeat" event back to the SDK, so that it can know that the menu is visible
+		set "cmd" "mainmenu_heartbeat;";
+		resetTime 0;
+
+/*		if ("gui::mode" == MM_STATE_NONE)
+		{
+			set "cmd" "log 'Detected NONE state, selecting MAINMENU.'"; 
+			set "gui::targetmode" MM_STATE_MAINMENU;
+			set "gui::backgrounds" "";
+			resetTime "MainMenuModeSelect" 0;
+		}*/
+	}
+}
+windowDef ToolTip
+{
+	rect 16, 360 , 288, 120
+	visible "gui::tdm_show_menu_tooltips"
+	float active;
+	windowDef ToolTipText
+	{
+		rect 00, 10, 280, 80
+		MM_TT_FONT
+		textscale 0.2
+	}
+}
+#define showToolTip(TTtext)\
+set "ToolTipText::text" TTtext
+
+#define hideToolTip\
+set "ToolTipText::text" ""
+
+#define toolTip(TTtext)\
+onMouseEnter\
+{\
+	showToolTip(TTtext);\
+}\
+onMouseExit\
+{\
+	hideToolTip;\
+}
+			

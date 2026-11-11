@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.17..4.4)
 
 get_property(is_multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
 if(NOT is_multi_config AND NOT CMAKE_BUILD_TYPE)
@@ -24,7 +24,6 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/sys/cmake")
 
 include(CMakeDependentOption)
 include(ucm)
-include(SvnVersion)
 include(CheckCXXCompilerFlag)
 include(CheckPIESupported)
 
@@ -41,8 +40,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_C_STANDARD 11)
 
 cmake_dependent_option(WITH_TOOLS "Compile with Tools" ON "MSVC" OFF)
-set(GAME_DIR "${PROJECT_SOURCE_DIR}/../darkmod" CACHE STRING "The directory where the game assets are stored")
-option(COPY_EXE "Copy executable to GAME_DIR after build" ON)
+set(GAME_DIR "${CMAKE_BINARY_DIR}/darkmod" CACHE STRING "The directory where the game assets are stored")
+option(COPY_EXE "Copy executable to GAME_DIR after build" OFF)
 option(ENABLE_TRACY "Enable tracy profiling support. Needs to be activated ingame by enabling the cvar com_enableTracing." ON)
 
 if (UNIX)
@@ -122,9 +121,14 @@ elseif (MSVC)
 endif ()
 
 add_executable(TheDarkMod)
-
-get_svn_revision(SVNVERSION)
-configure_file("idlib/svnversion.cmake.h" "${PROJECT_SOURCE_DIR}/idlib/svnversion.h" @ONLY)
+find_package(Git)
+add_custom_target(version
+  ${CMAKE_COMMAND} -D SRC=${CMAKE_SOURCE_DIR}/idlib/gitversion.cmake.h
+									 -D DST=${CMAKE_SOURCE_DIR}/idlib/gitversion.h
+                   -D GIT_EXECUTABLE=${GIT_EXECUTABLE}
+                   -P ${CMAKE_SOURCE_DIR}/GenerateVersionHeader.cmake
+  )
+add_dependencies(TheDarkMod version)
 
 # gather list of source files
 ucm_add_dirs(
@@ -240,15 +244,15 @@ endif()
 
 if (UNIX)
 	if (CMAKE_SIZEOF_VOID_P EQUAL 8)
-		set_target_properties(TheDarkMod PROPERTIES OUTPUT_NAME "thedarkmod.x64")
+		set_target_properties(TheDarkMod PROPERTIES OUTPUT_NAME "thedarkmodvr.x64")
 	else ()
-		set_target_properties(TheDarkMod PROPERTIES OUTPUT_NAME "thedarkmod.x86")
+		set_target_properties(TheDarkMod PROPERTIES OUTPUT_NAME "thedarkmodvr.x86")
 	endif ()
 elseif (MSVC)
 	if (CMAKE_SIZEOF_VOID_P EQUAL 8)
-		set_target_properties(TheDarkMod PROPERTIES OUTPUT_NAME "TheDarkModx64")
+				set_target_properties(TheDarkMod PROPERTIES OUTPUT_NAME "TheDarkModVRx64")
 	else ()
-		set_target_properties(TheDarkMod PROPERTIES OUTPUT_NAME "TheDarkMod")
+				set_target_properties(TheDarkMod PROPERTIES OUTPUT_NAME "TheDarkModVR")
 	endif ()
 endif ()
 
@@ -267,6 +271,7 @@ include_directories(
 		"${PROJECT_SOURCE_DIR}/idlib"
 )
 
+# These are normally static-lib artefacts built by conan
 find_package(ZLIB REQUIRED CONFIG)
 find_package(minizip REQUIRED CONFIG)
 find_package(CURL REQUIRED CONFIG)
@@ -281,6 +286,23 @@ find_package(MbedTLS REQUIRED CONFIG)
 find_package(glfw3 REQUIRED CONFIG)
 find_package(doctest REQUIRED CONFIG)
 find_package(tracy REQUIRED CONFIG)
+# system packages
+if(UNIX)
+		find_package(X11 REQUIRED)
+		# find_package(Xext REQUIRED)
+		# find_package(Xxf86vm REQUIRED)
+endif()
+
+find_package(OpenXR REQUIRED CONFIG)
+if(OpenXR_FOUND AND NOT TARGET OpenXR::OpenXR)
+    add_library(OpenXR::OpenXR INTERFACE IMPORTED)
+	set_target_properties(
+		OpenXR::OpenXR
+		PROPERTIES
+			INTERFACE_INCLUDE_DIRECTORIES "${OpenXR_INCLUDE_DIR}"
+			INTERFACE_LINK_LIBRARIES "${OpenXR_LIBRARIES}"
+	)
+endif()
 
 target_link_libraries(TheDarkMod
 		ZLIB::ZLIB
@@ -296,7 +318,16 @@ target_link_libraries(TheDarkMod
 		pugixml::pugixml
 		doctest::doctest
 		tracy::tracy
+		#
+		OpenXR::OpenXR
 )
+if (UNIX)
+		target_link_libraries(TheDarkMod
+				X11::X11
+				X11::Xext
+				X11::Xxf86vm
+		)
+endif()
 
 if (WIN32)
 	target_link_libraries(TheDarkMod ws2_32 iphlpapi winmm bcrypt dinput8 dbghelp)

@@ -1,7 +1,9 @@
 .idea
 cmake-build-*
-idlib/svnversion.h
+idlib/gitversion.h
 CMakeSettings.json
+compile_commands.json
+.cache*/
 
 .svn/
 .vs/

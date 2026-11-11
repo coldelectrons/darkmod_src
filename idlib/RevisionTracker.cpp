@@ -23,14 +23,14 @@ Project: The Dark Mod (http://www.thedarkmod.com/)
 #include <string>
 
 //this auto-generated file contains svnversion output in string constant
-#include "svnversion.h"
+#include "gitversion.h"
 
 
 RevisionTracker::RevisionTracker() :
 	_highestRevision(0),
 	_lowestRevision(INT_MAX)
 {
-	_version = SVN_WORKING_COPY_VERSION;
+	_version = TDMVR_VERSION;
 
 	idStr buff = _version;
 	for (int i = 0; i < buff.Length(); i++)
@@ -47,8 +47,8 @@ RevisionTracker::RevisionTracker() :
 			_highestRevision = _lowestRevision;				//rev
 	}
 	else {
-		common->Warning("Cannot detect SVN version!");
-		common->Printf("Make sure 'svnversion' command works in console on the build machine.\n\n");
+		common->Warning("Cannot detect git version!");
+		common->Printf("Make sure 'git' command works in console on the build machine.\n\n");
 	}
 }
 
