@@ -116,6 +116,56 @@ void DepthStage::DrawDepth( const viewDef_t *viewDef, drawSurf_t **drawSurfs, in
 	}
 }
 
+void DepthStage::PartitionSurfaces( drawSurf_t **drawSurfs, int numDrawSurfs, idList<drawSurf_t *> &subviewSurfs,
+		idList<drawSurf_t *> &opaqueSurfs, idList<drawSurf_t *> &remainingSurfs ) {
+	for ( int i = 0; i < numDrawSurfs; ++i ) {
+		drawSurf_t *surf = drawSurfs[i];
+		const idMaterial *material = surf->material;
+
+		if ( !ShouldDrawSurf( surf ) ) {
+			continue;
+		}
+
+		if ( material->GetSort() == SS_SUBVIEW ) {
+			// sub view surfaces need to be rendered first in a generic pass due to mirror plane clipping
+			subviewSurfs.AddGrow( surf );
+		} else if ( material->Coverage() == MC_OPAQUE && !surf->space->weaponDepthHack ) {
+			opaqueSurfs.AddGrow( surf );
+		} else {
+			const float *regs = surf->shaderRegisters;
+			bool isOpaque = true;
+			for ( int i = 0; i < material->GetNumStages(); ++i ) {
+				const shaderStage_t *stage = material->GetStage( i );
+				if ( !stage->hasAlphaTest ) {
+					continue;
+				}
+
+				// check the stage enable condition
+				if ( regs[stage->conditionRegister] == 0 ) {
+					continue;
+				}
+
+				isOpaque = false;
+				break;
+			}
+
+			if (isOpaque && !surf->space->weaponDepthHack) {
+				opaqueSurfs.AddGrow( surf );
+			} else {
+				// these need alpha checks in the shader and thus can't be handled by the fast pass
+				remainingSurfs.AddGrow( surf );
+			}
+		}
+	}
+}
+
+// XXX wtf? how did the rest of function not get into the patch
+// void DepthStage::GenericDepthPass( const idList<drawSurf_t *> drawSurfs, const viewDef_t *viewDef ) {
+// 	if ( drawSurfs.Num() == 0 ) {
+// 		return;
+// 	}
+
+
 bool DepthStage::ShouldDrawSurf(const drawSurf_t *surf) const {
     const idMaterial *shader = surf->material;
 

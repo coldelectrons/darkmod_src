@@ -18,7 +18,7 @@
 
 #include "OpenXRSwapchainGL.h"
 #include "xr_loader.h"
-#include "xr_math.h"
+#include "renderer/vr/xr_math.h"
 #include "../tr_local.h"
 #include "renderer/backend/FrameBuffer.h"
 #include "renderer/backend/FrameBufferManager.h"
@@ -153,7 +153,7 @@ void OpenXRBackend::RenderStereoView( const frameData_t *frameData ) {
 	AcquireFboAndTexture( LEFT_EYE, eyeBuffers[0], eyeTextures[0] );
 	AcquireFboAndTexture( RIGHT_EYE, eyeBuffers[1], eyeTextures[1] );
 
-#ifdef __linux__
+#if defined(__linux__) || defined(__unix__)
 	// hack: current SteamVR OpenXR implementation is broken and does not properly reset the GL context after certain calls
 	GLimp_ActivateContext();
 #endif
@@ -258,7 +258,7 @@ void OpenXRBackend::ExecuteRenderCommands( const frameData_t *frameData, eyeView
 					frameBuffers->EnterPrimary();
 				}
 				const_cast<viewDef_t*>(backEnd.viewDef)->updateShadowMap = eyeView == UI || eyeView == LEFT_EYE;
-				renderBackend->DrawView( backEnd.viewDef );
+				renderBackend->DrawView( backEnd.viewDef, true );
 			}
 			break;
 		}
@@ -350,10 +350,10 @@ idScreenRect VR_WorldBoundsToScissor( idBounds bounds, const viewDef_t *view ) {
 	float screenWidth = (float)view->viewport.x2 - (float)view->viewport.x1;
 	float screenHeight = (float)view->viewport.y2 - (float)view->viewport.y1;
 
-	scissor.x1 = idMath::Ftoi( projected[0][0] * screenWidth );
-	scissor.x2 = idMath::Ftoi( projected[1][0] * screenWidth );
-	scissor.y1 = idMath::Ftoi( projected[0][1] * screenHeight );
-	scissor.y2 = idMath::Ftoi( projected[1][1] * screenHeight );
+	scissor.x1 = idMath::FtoiRound( projected[0][0] * screenWidth );
+	scissor.x2 = idMath::FtoiRound( projected[1][0] * screenWidth );
+	scissor.y1 = idMath::FtoiRound( projected[0][1] * screenHeight );
+	scissor.y2 = idMath::FtoiRound( projected[1][1] * screenHeight );
 	scissor.Expand();
 
 	scissor.zmin = projected[0][2];
@@ -382,10 +382,10 @@ idScreenRect VR_CalcLightScissorRectangle( viewLight_t *vLight, const viewDef_t 
 	float screenWidth = (float)viewDef->viewport.x2 - (float)viewDef->viewport.x1;
 	float screenHeight = (float)viewDef->viewport.y2 - (float)viewDef->viewport.y1;
 
-	lightScissorRect.x1 = idMath::Ftoi( projected[0][0] * screenWidth );
-	lightScissorRect.x2 = idMath::Ftoi( projected[1][0] * screenWidth );
-	lightScissorRect.y1 = idMath::Ftoi( projected[0][1] * screenHeight );
-	lightScissorRect.y2 = idMath::Ftoi( projected[1][1] * screenHeight );
+	lightScissorRect.x1 = idMath::FtoiRound( projected[0][0] * screenWidth );
+	lightScissorRect.x2 = idMath::FtoiRound( projected[1][0] * screenWidth );
+	lightScissorRect.y1 = idMath::FtoiRound( projected[0][1] * screenHeight );
+	lightScissorRect.y2 = idMath::FtoiRound( projected[1][1] * screenHeight );
 	lightScissorRect.Expand();
 	lightScissorRect.Intersect( viewDef->scissor );
 
@@ -505,12 +505,12 @@ void OpenXRBackend::UpdateViewPose( viewDef_t *viewDef, int eye ) {
 	idMat3 axis = orientation.ToMat3();
 
 	// update with new pose
-	if ( viewDef->isMirror ) {
+	if ( viewDef->isMirrorGen ) {
 		assert( viewDef->superView != nullptr );
 		renderView_t *origRv = nullptr;
 		// find the nearest mirror info stored in this or parent views
 		for ( viewDef_t *vd = viewDef; vd; vd = vd->superView ) {
-			if ( vd->renderView.isMirror ) {
+			if ( vd->renderView.isMirrorGen ) {
 				origRv = &vd->renderView;
 				break;
 			}
@@ -694,17 +694,21 @@ namespace {
 }
 #endif
 
-#ifdef __linux__
+#if defined(__linux__) || defined(__unix__) || defined(UNIX) || defined(LINUX)
 #include "GLFW/glfw3.h"
-#define GLFW_EXPOSE_NATIVE_X11 1
+// XXX why do we need native exposure
+// #define GLFW_EXPOSE_NATIVE_X11 1
+#define GLFW_EXPOSE_NATIVE_WAYLAND 1
 #define GLFW_EXPOSE_NATIVE_GLX 1
 #include "GLFW/glfw3native.h"
+
 extern GLFWwindow *window;
 
-typedef XrGraphicsBindingOpenGLXlibKHR XrGraphicsBindingGL;
-XrGraphicsBindingOpenGLXlibKHR Sys_CreateGraphicsBindingGL() {
-	Display *dpy = glfwGetX11Display();
-	Window win = glfwGetX11Window( window );
+typedef XrGraphicsBindingOpenGLWaylandKHR XrGraphicsBindingGL;
+
+static XrGraphicsBindingOpenGLWaylandKHR Sys_CreateGraphicsBindingGL() {
+	auto *dpy = glfwGetWaylandDisplay();
+	auto *win = glfwGetWaylandWindow( window );
 	GLXContext ctx = glfwGetGLXContext( window );
 	auto glXQueryContext = (PFNGLXQUERYCONTEXTPROC)glfwGetProcAddress( "glXQueryContext" );
 	auto glXChooseFBConfig = (PFNGLXCHOOSEFBCONFIGPROC)glfwGetProcAddress( "glXChooseFBConfig" );
@@ -724,7 +728,7 @@ XrGraphicsBindingOpenGLXlibKHR Sys_CreateGraphicsBindingGL() {
 	uint32_t visualId = XVisualIDFromVisual(visinfo->visual);
 
 	return {
-		XR_TYPE_GRAPHICS_BINDING_OPENGL_XLIB_KHR,
+		XR_TYPE_GRAPHICS_BINDING_OPENGL_WAYLAND_KHR,
 		nullptr,
 		dpy,
 		visualId,
@@ -782,7 +786,7 @@ void OpenXRBackend::InitBackend() {
 			XR_TYPE_GRAPHICS_REQUIREMENTS_D3D11_KHR,
 			nullptr,
 		};
-		result = xrGetD3D11GraphicsRequirementsKHR( instance, system, &d3d11Reqs );
+		result = qxrGetD3D11GraphicsRequirementsKHR( instance, system, &d3d11Reqs );
 		XR_CheckResult( result, "calling D3D11 graphics requirements", instance );
 		d3d11Helper.Init( d3d11Reqs );
 		dxGraphicsBinding = d3d11Helper.CreateGraphicsBinding();
@@ -794,14 +798,14 @@ void OpenXRBackend::InitBackend() {
 	} else
 #endif
 	{
-		usingD3D11 = true;
+		usingD3D11 = false;
 		// must call graphicsRequirements before opening a session, although the results are not
 		// that interesting for us
 		XrGraphicsRequirementsOpenGLKHR openglReqs = {
 			XR_TYPE_GRAPHICS_REQUIREMENTS_OPENGL_KHR,
 			nullptr,
 		};
-		result = xrGetOpenGLGraphicsRequirementsKHR( instance, system, &openglReqs );
+		result = qxrGetOpenGLGraphicsRequirementsKHR( instance, system, &openglReqs );
 		XR_CheckResult( result, "calling OpenGL graphics requirements", instance );
 
 		glGraphicsBinding = Sys_CreateGraphicsBindingGL();
@@ -838,7 +842,7 @@ void OpenXRBackend::InitBackend() {
 
 	common->Printf( "-----------------------------\n" );
 
-#ifdef __linux__
+#if defined(__linux__) || defined(__unix__)
 	// hack: current SteamVR OpenXR implementation is broken and does not properly reset the GL context after certain calls
 	GLimp_ActivateContext();
 #endif
@@ -861,7 +865,7 @@ void OpenXRBackend::DestroyBackend() {
 	session = nullptr;
 
 	if ( debugMessenger != nullptr ) {
-		xrDestroyDebugUtilsMessengerEXT( debugMessenger );
+		qxrDestroyDebugUtilsMessengerEXT( debugMessenger );
 	}
 
 	xrDestroyInstance( instance );
@@ -982,7 +986,7 @@ void OpenXRBackend::SubmitFrame() {
 
 	TRACE_GL_SCOPE("XrSubmitFrame")
 
-#ifdef __linux__
+#if defined(__linux__) || defined(__unix__) || !defined(WIN32)
 	// hack: the SteamVR OpenXR runtime does not properly set viewport and scissor before copying render textures :(
 	qglViewport(0, 0, 10000, 10000);
 	qglScissor(0, 0, 10000, 10000);
@@ -1035,13 +1039,13 @@ void OpenXRBackend::SubmitFrame() {
 		nullptr,
 		predictedFrameDisplayTime,
 		XR_ENVIRONMENT_BLEND_MODE_OPAQUE,
-		submittedLayers.Num(),
+		static_cast<uint32_t>(submittedLayers.Num()),
 		submittedLayers.Ptr(),
 	};
 	XrResult result = xrEndFrame( session, &frameEndInfo );
 	XR_CheckResult( result, "submitting frame", instance, false );
 
-#ifdef __linux__
+#if defined(__linux__) || defined(__unix__) || !defined(WIN32)
 	// hack: current SteamVR OpenXR implementation is broken and does not properly reset the GL context after certain calls
 	GLimp_ActivateContext();
 #endif
@@ -1106,7 +1110,7 @@ idList<idVec2> OpenXRBackend::GetHiddenAreaMask( eyeView_t eye ) {
 		0,
 		nullptr,
 	};
-	XrResult result = xrGetVisibilityMaskKHR( session, XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO, eye,
+	XrResult result = qxrGetVisibilityMaskKHR( session, XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO, eye,
 		XR_VISIBILITY_MASK_TYPE_HIDDEN_TRIANGLE_MESH_KHR, &visibilityMask );
 	XR_CheckResult( result, "getting hidden area mesh", instance, false );
 	if ( !XR_SUCCEEDED(result) ) {
@@ -1122,7 +1126,7 @@ idList<idVec2> OpenXRBackend::GetHiddenAreaMask( eyeView_t eye ) {
 	visibilityMask.indexCapacityInput = indices.Num();
 	visibilityMask.indices = indices.Ptr();
 
-	result = xrGetVisibilityMaskKHR( session, XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO, eye,
+	result = qxrGetVisibilityMaskKHR( session, XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO, eye,
 		XR_VISIBILITY_MASK_TYPE_HIDDEN_TRIANGLE_MESH_KHR, &visibilityMask );
 	XR_CheckResult( result, "getting hidden area mesh", instance, false );
 	if ( !XR_SUCCEEDED(result) ) {
@@ -1153,7 +1157,7 @@ idVec4 OpenXRBackend::GetVisibleAreaBounds( eyeView_t eye ) {
 		0,
 		nullptr,
 	};
-	XrResult result = xrGetVisibilityMaskKHR( session, XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO, eye,
+	XrResult result = qxrGetVisibilityMaskKHR( session, XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO, eye,
 		XR_VISIBILITY_MASK_TYPE_VISIBLE_TRIANGLE_MESH_KHR, &visibilityMask );
 	XR_CheckResult( result, "getting visible area mesh", instance, false );
 	if ( !XR_SUCCEEDED(result) ) {
@@ -1169,7 +1173,7 @@ idVec4 OpenXRBackend::GetVisibleAreaBounds( eyeView_t eye ) {
 	visibilityMask.indexCapacityInput = indices.Num();
 	visibilityMask.indices = indices.Ptr();
 
-	result = xrGetVisibilityMaskKHR( session, XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO, eye,
+	result = qxrGetVisibilityMaskKHR( session, XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO, eye,
 		XR_VISIBILITY_MASK_TYPE_VISIBLE_TRIANGLE_MESH_KHR, &visibilityMask );
 	XR_CheckResult( result, "getting visible area mesh", instance, false );
 	if ( !XR_SUCCEEDED(result) ) {
@@ -1205,7 +1209,7 @@ void OpenXRBackend::SetupDebugMessenger() {
 		&XR_DebugMessengerCallback,
 		nullptr,
 	};
-	XrResult result = xrCreateDebugUtilsMessengerEXT( instance, &createInfo, &debugMessenger );
+	XrResult result = qxrCreateDebugUtilsMessengerEXT( instance, &createInfo, &debugMessenger );
 	XR_CheckResult( result, "setting up debug messenger", instance );
 	common->Printf( "Enabled debug messenger\n" );
 }

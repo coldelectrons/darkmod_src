@@ -371,7 +371,7 @@ viewLight_t *R_SetLightDefViewLight( idRenderLightLocal *light ) {
 	if ( !r_shadows.GetInteger() || vLight->noShadows || !shader->LightCastsShadows() )
 		vLight->shadows = LS_NONE;
 	else {
-		if ( r_shadows.GetInteger() == 1 || tooBigForShadowMaps )
+		if ( r_shadows.GetInteger() == 1 || tooBigForShadowMaps || tr.viewDef->IsLightGem() || tr.viewDef->isSubview )
 			vLight->shadows = LS_STENCIL;
 		else
 			vLight->shadows = LS_MAPS;
@@ -504,7 +504,7 @@ void idRenderWorldLocal::CreateLightDefInteractions( idRenderLightLocal *ldef ) 
 				continue;
 
 			// if any of the edef's interaction match this light, we don't
-			// need to consider it. 
+			// need to consider it.
 			idInteraction *inter = interactionTable.Find(this, ldef->index, entityIdx);
 			if ( inter ) {
 				// if this entity wasn't in view already, the scissor rect will be empty,
@@ -528,7 +528,7 @@ void idRenderWorldLocal::CreateLightDefInteractions( idRenderLightLocal *ldef ) 
 			idRenderEntityLocal *edef = entityDefs[entityIdx];
 
 			// if any of the edef's interaction match this light, we don't
-			// need to consider it. 
+			// need to consider it.
 			idInteraction *inter = interactionTable.Find(this, ldef->index, entityIdx);
 			if ( inter ) {
 				// if this entity wasn't in view already, the scissor rect will be empty,
@@ -776,7 +776,7 @@ drawSurf_t *R_PrepareLightSurf( const srfTriangles_t *tri, const viewEntity_t *s
 	drawSurf->material = material;
 	drawSurf->scissorRect = scissor;
 	drawSurf->dsFlags = 0;
-	
+
 	drawSurf->particle_radius = 0.0f; // #3878
 
 	if ( viewInsideShadow ) {
@@ -813,7 +813,7 @@ drawSurf_t *R_PrepareLightSurf( const srfTriangles_t *tri, const viewEntity_t *s
 R_ClippedLightScissorRectangle
 ======================
 */
-idScreenRect R_ClippedLightScissorRectangle( viewLight_t *vLight ) {
+idScreenRect R_ClippedLightScissorRectangle( viewLight_t *vLight, viewDef_t *viewDef ) {
 	const idRenderLightLocal *light = vLight->lightDef;
 	idScreenRect r;
 	idFixedWinding w;
@@ -825,19 +825,19 @@ idScreenRect R_ClippedLightScissorRectangle( viewLight_t *vLight ) {
 
 		// !ow - projected lights may have one of the frustums degenerated
 		// OR
-		// light->frustum[i].Distance( tr.viewDef->renderView.vieworg ) >= 0
+		// light->frustum[i].Distance( viewDef->renderView.vieworg ) >= 0
 		// the light frustum planes face out from the light,
 		// so the planes that have the view origin on the negative
 		// side will be the "back" faces of the light, which must have
 		// some fragment inside the portalStack to be visible
-		if ( !ow.GetNumPoints() || light->frustum[i].Distance( tr.viewDef->renderView.vieworg ) >= 0 ) {
+		if ( !ow.GetNumPoints() || light->frustum[i].Distance( viewDef->renderView.vieworg ) >= 0 ) {
 			continue;
 		}
 		w = ow;
 
 		// now check the winding against each of the frustum planes
 		for ( int j = 0; j < 5; j++ ) {
-			if ( !w.ClipInPlace( -tr.viewDef->frustum[j] ) ) {
+			if ( !w.ClipInPlace( -viewDef->frustum[j] ) ) {
 				break;
 			}
 		}
@@ -847,25 +847,25 @@ idScreenRect R_ClippedLightScissorRectangle( viewLight_t *vLight ) {
 			idPlane		eye, clip;
 			idVec3		ndc;
 
-			R_TransformModelToClip( w[j].ToVec3(), tr.viewDef->worldSpace.modelViewMatrix, tr.viewDef->projectionMatrix, eye, clip );
+			R_TransformModelToClip( w[j].ToVec3(), viewDef->worldSpace.modelViewMatrix, viewDef->projectionMatrix, eye, clip );
 
 			if ( clip[3] <= 0.01f ) {
 				clip[3] = 0.01f;
 			}
-			R_TransformClipToDevice( clip, tr.viewDef, ndc );
+			R_TransformClipToDevice( clip, viewDef, ndc );
 
-			float windowX = 0.5f * ( 1.0f + ndc[0] ) * ( tr.viewDef->viewport.x2 - tr.viewDef->viewport.x1 );
-			float windowY = 0.5f * ( 1.0f + ndc[1] ) * ( tr.viewDef->viewport.y2 - tr.viewDef->viewport.y1 );
+			float windowX = 0.5f * ( 1.0f + ndc[0] ) * ( viewDef->viewport.x2 - viewDef->viewport.x1 );
+			float windowY = 0.5f * ( 1.0f + ndc[1] ) * ( viewDef->viewport.y2 - viewDef->viewport.y1 );
 
-			if ( windowX > tr.viewDef->scissor.x2 ) {
-				windowX = tr.viewDef->scissor.x2;
-			} else if ( windowX < tr.viewDef->scissor.x1 ) {
-				windowX = tr.viewDef->scissor.x1;
+			if ( windowX > viewDef->scissor.x2 ) {
+				windowX = viewDef->scissor.x2;
+			} else if ( windowX < viewDef->scissor.x1 ) {
+				windowX = viewDef->scissor.x1;
 			}
-			if ( windowY > tr.viewDef->scissor.y2 ) {
-				windowY = tr.viewDef->scissor.y2;
-			} else if ( windowY < tr.viewDef->scissor.y1 ) {
-				windowY = tr.viewDef->scissor.y1;
+			if ( windowY > viewDef->scissor.y2 ) {
+				windowY = viewDef->scissor.y2;
+			} else if ( windowY < viewDef->scissor.y1 ) {
+				windowY = viewDef->scissor.y1;
 			}
 			r.AddPoint( windowX, windowY );
 		}
@@ -887,7 +887,7 @@ stencil clears and interaction drawing
 */
 static int c_clippedLight = 0, c_unclippedLight = 0;
 
-idScreenRect R_CalcLightScissorRectangle( viewLight_t *vLight ) {
+idScreenRect R_CalcLightScissorRectangle( viewLight_t *vLight, viewDef_t *viewDef ) {
 	idScreenRect	r;
 	idPlane			eye, clip;
 	idVec3			ndc;
@@ -895,7 +895,7 @@ idScreenRect R_CalcLightScissorRectangle( viewLight_t *vLight ) {
 	if ( vLight->lightDef->parms.pointLight ) {
 		idBounds bounds;
 		idRenderLightLocal *lightDef = vLight->lightDef;
-		if ( tr.viewDef->viewFrustum.ProjectionBounds( idBox( lightDef->parms.origin, lightDef->parms.lightRadius, lightDef->parms.axis ), bounds ) )
+		if ( viewDef->viewFrustum.ProjectionBounds( idBox( lightDef->parms.origin, lightDef->parms.lightRadius, lightDef->parms.axis ), bounds ) )
 			r = R_ScreenRectFromViewFrustumBounds( bounds );
 		else
 			r.ClearWithZ();
@@ -903,42 +903,42 @@ idScreenRect R_CalcLightScissorRectangle( viewLight_t *vLight ) {
 	}
 
 	if ( r_useClippedLightScissors.GetInteger() == 2 ) {
-		return R_ClippedLightScissorRectangle( vLight );
+		return R_ClippedLightScissorRectangle( vLight, viewDef );
 	}
 	r.Clear();
 
 	const srfTriangles_t *tri = vLight->lightDef->frustumTris;
 
 	for ( int i = 0 ; i < tri->numVerts ; i++ ) {
-		R_TransformModelToClip( tri->verts[i].xyz, tr.viewDef->worldSpace.modelViewMatrix,
-			tr.viewDef->projectionMatrix, eye, clip );
+		R_TransformModelToClip( tri->verts[i].xyz, viewDef->worldSpace.modelViewMatrix,
+			viewDef->projectionMatrix, eye, clip );
 
 		// if it is near clipped, clip the winding polygons to the view frustum
 		if ( clip[3] <= 1 ) {
 			c_clippedLight++;
 			if ( r_useClippedLightScissors.GetInteger() ) {
-				return R_ClippedLightScissorRectangle( vLight );
+				return R_ClippedLightScissorRectangle( vLight, viewDef );
 			} else {
 				r.x1 = r.y1 = 0;
-				r.x2 = ( tr.viewDef->viewport.x2 - tr.viewDef->viewport.x1 ) - 1;
-				r.y2 = ( tr.viewDef->viewport.y2 - tr.viewDef->viewport.y1 ) - 1;
+				r.x2 = ( viewDef->viewport.x2 - viewDef->viewport.x1 ) - 1;
+				r.y2 = ( viewDef->viewport.y2 - viewDef->viewport.y1 ) - 1;
 				return r;
 			}
 		}
-		R_TransformClipToDevice( clip, tr.viewDef, ndc );
+		R_TransformClipToDevice( clip, viewDef, ndc );
 
-		float windowX = 0.5f * ( 1.0f + ndc[0] ) * ( tr.viewDef->viewport.x2 - tr.viewDef->viewport.x1 );
-		float windowY = 0.5f * ( 1.0f + ndc[1] ) * ( tr.viewDef->viewport.y2 - tr.viewDef->viewport.y1 );
+		float windowX = 0.5f * ( 1.0f + ndc[0] ) * ( viewDef->viewport.x2 - viewDef->viewport.x1 );
+		float windowY = 0.5f * ( 1.0f + ndc[1] ) * ( viewDef->viewport.y2 - viewDef->viewport.y1 );
 
-		if ( windowX > tr.viewDef->scissor.x2 ) {
-			windowX = tr.viewDef->scissor.x2;
-		} else if ( windowX < tr.viewDef->scissor.x1 ) {
-			windowX = tr.viewDef->scissor.x1;
+		if ( windowX > viewDef->scissor.x2 ) {
+			windowX = viewDef->scissor.x2;
+		} else if ( windowX < viewDef->scissor.x1 ) {
+			windowX = viewDef->scissor.x1;
 		}
-		if ( windowY > tr.viewDef->scissor.y2 ) {
-			windowY = tr.viewDef->scissor.y2;
-		} else if ( windowY < tr.viewDef->scissor.y1 ) {
-			windowY = tr.viewDef->scissor.y1;
+		if ( windowY > viewDef->scissor.y2 ) {
+			windowY = viewDef->scissor.y2;
+		} else if ( windowY < viewDef->scissor.y1 ) {
+			windowY = viewDef->scissor.y1;
 		}
 		r.AddPoint( windowX, windowY );
 	}
@@ -971,7 +971,7 @@ and the viewEntitys due to game movement
 */
 void R_AddLightSurfaces( void ) {
 	TRACE_CPU_SCOPE( "R_AddLightSurfaces" );
-	
+
 	viewLight_t			*vLight;
 	idRenderLightLocal	*light;
 	viewLight_t			**ptr;
@@ -1055,7 +1055,7 @@ void R_AddLightSurfaces( void ) {
 		if ( r_useLightScissors.GetBool() ) {
 			// calculate the screen area covered by the light frustum
 			// which will be used to crop the stencil cull
-			idScreenRect scissorRect = R_CalcLightScissorRectangle( vLight );
+			idScreenRect scissorRect = R_CalcLightScissorRectangle( vLight, tr.viewDef );
 			// intersect with the portal crossing scissor rectangle
 			vLight->scissorRect.IntersectWithZ( scissorRect );
 
@@ -1265,7 +1265,7 @@ R_AddDrawSurf
 =================
 */
 void R_AddDrawSurf( const srfTriangles_t *tri, const viewEntity_t *space, const renderEntity_t *renderEntity,
-					const idMaterial *material, const idScreenRect &scissor, const float soft_particle_radius, bool deferred )
+					const idMaterial *material, const idScreenRect &scissor, const float soft_particle_radius, bool deferred, bool isGui )
 {
 	drawSurf_t		*drawSurf;
 	const float		*shaderParms;
@@ -1278,7 +1278,7 @@ void R_AddDrawSurf( const srfTriangles_t *tri, const viewEntity_t *space, const 
 	drawSurf->dynamicImageOverride = nullptr;
 	drawSurf->scissorRect = scissor;
 	drawSurf->sort = material->GetSort();
-	drawSurf->dsFlags = 0;
+	drawSurf->dsFlags = isGui ? DSF_GUI_SURF : 0;
 	if ( soft_particle_radius != -1.0f ) {	// #3878
 		drawSurf->dsFlags |= DSF_SOFT_PARTICLE;
 		drawSurf->particle_radius = soft_particle_radius;
@@ -1424,11 +1424,11 @@ static void R_AddAmbientDrawsurfs( viewEntity_t *vEntity ) {
 	const idMaterial	*shader;
 
 	idRenderEntityLocal &def = *vEntity->entityDef;
-	if ( def.dynamicModel ) 
+	if ( def.dynamicModel )
 		model = def.dynamicModel;
 	else
 		model = def.parms.hModel;
-	
+
 	// add all the surfaces
 	total = model->NumSurfaces();
 	for ( i = 0 ; i < total ; i++ ) {
@@ -1460,7 +1460,7 @@ static void R_AddAmbientDrawsurfs( viewEntity_t *vEntity ) {
 			continue;
 		}
 
-		// Don't put worldspawn particle textures (weather patches, mostly) on the drawSurf list for non-visible 
+		// Don't put worldspawn particle textures (weather patches, mostly) on the drawSurf list for non-visible
 		// views (in TDM, the light gem render). Important to block it before their verts are calculated -- SteveL #3970
 		if ( tr.viewDef->IsLightGem() && ( shader->Deform() == DFRM_PARTICLE || shader->Deform() == DFRM_PARTICLE2 ) ) {
 			continue;
@@ -1471,12 +1471,12 @@ static void R_AddAmbientDrawsurfs( viewEntity_t *vEntity ) {
 			int j, k;
 			for ( j = 0 ; j < tri->numVerts ; j++ ) {
 				for ( k = 0 ; k < 3 ; k++ ) {
-					if ( tri->verts[j].xyz[k] > tri->bounds[1][k] + CHECK_BOUNDS_EPSILON || 
+					if ( tri->verts[j].xyz[k] > tri->bounds[1][k] + CHECK_BOUNDS_EPSILON ||
 						 tri->verts[j].xyz[k] < tri->bounds[0][k] - CHECK_BOUNDS_EPSILON ) {
 						 common->Printf( "bad tri->bounds on %s:%s\n", def.parms.hModel->Name(), shader->GetName() );
 						 break;
 					}
-					if ( tri->verts[j].xyz[k] > def.referenceBounds[1][k] + CHECK_BOUNDS_EPSILON || 
+					if ( tri->verts[j].xyz[k] > def.referenceBounds[1][k] + CHECK_BOUNDS_EPSILON ||
 						 tri->verts[j].xyz[k] < def.referenceBounds[0][k] - CHECK_BOUNDS_EPSILON ) {
 						 common->Printf( "bad referenceBounds on %s:%s\n", def.parms.hModel->Name(), shader->GetName() );
 						 break;
@@ -1514,7 +1514,7 @@ static void R_AddAmbientDrawsurfs( viewEntity_t *vEntity ) {
 
 			// Soft Particles -- SteveL #3878
 			float particle_radius = -1.0f;		// Default = disallow softening, but allow modelDepthHack if specified in the decl.
-			if ( r_useSoftParticles.GetBool() && 
+			if ( r_useSoftParticles.GetBool() &&
 				!shader->ReceivesLighting()	&&	// don't soften surfaces that are meant to be solid
 				!tr.viewDef->IsLightGem() )	{	// Skip during "invisible" rendering passes (e.g. lightgem)
 				const idRenderModelPrt* prt = dynamic_cast<const idRenderModelPrt*>( def.parms.hModel );
@@ -1582,7 +1582,7 @@ void R_AddSingleModel( viewEntity_t *vEntity ) {
 
 	idRenderEntityLocal& def = *vEntity->entityDef;
 	TRACE_CPU_SCOPE_TEXT( "R_AddSingleModel", GetTraceLabel(def.parms) )
-		
+
 	if ( ( r_skipModels.GetInteger() == 1 || tr.viewDef->areaNum < 0 ) && ( def.dynamicModel || def.cachedDynamicModel ) ) { // debug filters
 		return;
 	}
@@ -1621,7 +1621,7 @@ void R_AddSingleModel( viewEntity_t *vEntity ) {
 		tr.viewDef->renderView.time = game->GetTimeGroupTime( def.parms.timeGroup );
 	}*/
 
-	if ( R_CullXray( def) ) 
+	if ( R_CullXray( def) )
 		return;
 
 	// Don't let particle entities re-instantiate their dynamic model during non-visible views (in TDM, the light gem render) -- SteveL #3970
@@ -1677,7 +1677,7 @@ void R_AddPreparedSurfaces( viewEntity_t *vEntity ) {
 		}
 	}
 	vEntity->preparedSurfs = nullptr;
-	
+
 	idInteraction *inter, *next;
 	for ( inter = vEntity->entityDef->firstInteraction; inter != NULL && !inter->IsEmpty(); inter = next ) {
 		next = inter->entityNext;

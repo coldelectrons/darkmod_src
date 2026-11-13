@@ -45,7 +45,7 @@ typedef enum {
 
 // waterLevel_t has been moved to Physics_Actor.h
 
-typedef enum 
+typedef enum
 {
   WATERLEVEL_NONE,
   WATERLEVEL_FEET,
@@ -74,13 +74,13 @@ typedef struct playerPState_s {
 enum EMantlePhase
 {
 	notMantling_DarkModMantlePhase	= 0,
-	hang_DarkModMantlePhase,	
+	hang_DarkModMantlePhase,
 	pull_DarkModMantlePhase,
 	pullFast_DarkModMantlePhase, // STiFU #4945: Quicker pull-push medium obstacles
 	shiftHands_DarkModMantlePhase,
 	push_DarkModMantlePhase,
 	pushNonCrouched_DarkModMantlePhase, // STiFU #4930: Quicker low obstacles
-	fixClipping_DarkModMantlePhase,		
+	fixClipping_DarkModMantlePhase,
 	canceling_DarkModMantlePhase, // STiFU #4509: Cancel mantle when target is clipping
 	NumMantlePhases,
 };
@@ -91,7 +91,7 @@ class CForcePush;
 typedef std::shared_ptr<CForcePush> CForcePushPtr;
 
 // The class itself
-class idPhysics_Player : 
+class idPhysics_Player :
 	public idPhysics_Actor
 {
 public:
@@ -116,7 +116,7 @@ public:
 	**/
 	int						GetMovementFlags( void );
 	void					SetMovementFlags( int );
-	void					SetPlayerInput( const usercmd_t &cmd, const idAngles &newViewAngles );
+	void					SetPlayerInput( const usercmd_t &cmd, const idAngles &newViewAngles, const idAngles &actualViewAngles );
 	void					SetKnockBack( const int knockBackTime );
 	void					SetDebugLevel( bool set );
 							// feed back from last physics frame
@@ -264,6 +264,7 @@ private:
 	// player input
 	usercmd_t				command;
 	idAngles				viewAngles;
+	idAngles				actualViewAngles;
 
 	// run-time variables
 	int						framemsec;
@@ -311,7 +312,7 @@ private:
 	**/
 	idEntityPtr<idAFEntity_Base>	m_RopeEntTouched;
 
-	
+
 	/**
 	* toggled based on whether the player should stay attached to rope
 	**/
@@ -346,7 +347,7 @@ private:
 	* The player is allowed to deviate from this a little to climb around corners
 	**/
 	idVec3					m_vClimbPoint;
-	
+
 	/**
 	* Entity they're currently climbing on (used to add relative velocity)
 	**/
@@ -384,12 +385,12 @@ private:
 	int						m_ClimbSndRepDistHoriz;
 
 	int						m_NextAttachTime;
-	
+
 	/**
 	* Timer value used as a workaround to step up curbs on high framerates.
 	* Only set at a frametime below USERCMD_MSEC and decreased by the frametime each movement frame.
 	**/
-	
+
 	int						m_SlopeIgnoreTimer;
 
 	/**
@@ -489,7 +490,7 @@ public:
 	// This method returns
 	// true if the player is mantling, false otherwise
 	bool IsMantling() const;
-	
+
 	// This returns the current mantling phase
 	EMantlePhase GetMantlePhase() const;
 
@@ -497,7 +498,7 @@ public:
 	void CancelMantle();
 
 	// Checks to see if there is a mantleable target within reach
-	// of the player's view. If so, starts the mantle... 
+	// of the player's view. If so, starts the mantle...
 	// If the player is already mantling, this does nothing.
 	void PerformMantle();
 
@@ -509,7 +510,7 @@ protected:
 	EMantlePhase m_mantlePhase;
 
 	/**
-	 * greebo: Set to TRUE if the next mantling can start. Set to FALSE at the 
+	 * greebo: Set to TRUE if the next mantling can start. Set to FALSE at the
 	 *         beginning of a mantle process - the jump button has to be released
 	 *         again during a non-mantling phase to set this to TRUE again.
 	 */
@@ -521,7 +522,7 @@ protected:
 	idVec3 m_mantlePullStartPos;
 	idVec3 m_mantlePullEndPos;
 	idVec3 m_mantlePushEndPos;
-	
+
 	/*!
 	* STiFU #4509: Mantle canceling animation
 	*/
@@ -552,7 +553,7 @@ protected:
 	/*!
 	* Tracks, in milliseconds, how long jump button has been held down
 	* Counts upwards from 0.
-	*/ 
+	*/
 	float m_jumpHeldDownTime;
 
 	/*!
@@ -624,8 +625,8 @@ protected:
 	};
 
 	/*!
-	* 
-	* This function checks the collision target of the mantle 
+	*
+	* This function checks the collision target of the mantle
 	* trace to see if there is a surface within reach distance
 	* upon which the player will fit.
 	*
@@ -646,7 +647,7 @@ protected:
 		float maxHorizontalReachDistance,
 		trace_t& in_targetTraceResult,
 		idVec3& out_mantleEndPoint
-	);		
+	);
 
 	/*!
 	* Call this method to test whether or not the path
@@ -697,37 +698,37 @@ protected:
 	* @retval EMantleable_YesCrouched if the mantle target has a mantleable surface that can be reached in crouched state
 	* @retval EMantleable_YesUpstraight if the mantle target has a mantleable surface
 	*
-	*/	
+	*/
 	EMantleable ComputeMantlePathForTarget
-	(	
+	(
 		float maxVerticalReachDistance,
 		float maxHorizontalReachDistance,
 		const idVec3& eyePos,
 		trace_t& in_targetTraceResult,
 		idVec3& out_mantleEndPoint
 	);
-		
+
 	/*!
 	* This handles the reduction of the mantle timer by the
 	* number of milliseconds between animation frames. It
 	* uses the timer results to update the mantle timers.
 	*/
 	void UpdateMantleTimers();
-    
+
 	/*!
 	* This handles the movement of the the player during
 	* the phases of the mantle.  It performs the translation
 	* of the player along the mantle path, the camera movement
 	* that creates the visual effect, and the placing of the
 	* player into a crouch during the end phase of the mantle.
-	* 
+	*
 	*/
 	void MantleMove();
 
-	
+
 	/** @brief	  	Test if the mantle end position intersects with world geomtry
 	  * @param 		pPhysicsMantledEntity Pointer to the mantled entity
-	  * @return   	True, if the player is clipping into world geometry at the 
+	  * @return   	True, if the player is clipping into world geometry at the
 	  *				mantle endposition
 	  * @author		STiFU #4509: Test entposition for clipping, cancel in that case */
 	const bool IsMantleEndPosClipping(idPhysics* pPhysicsMantledEntity);
@@ -756,7 +757,7 @@ protected:
 	*/
 	float m_leanYawAngleDegrees;
 
-	/*! 
+	/*!
 	* The current lean angle
 	*/
 	float m_CurrentLeanTiltDegrees;
@@ -799,7 +800,7 @@ protected:
 
 	float m_lastCommandViewYaw;
 	float m_lastCommandViewPitch;
-	
+
 	/*!
 	* The current resulting view lean angles
 	*/
@@ -838,7 +839,7 @@ protected:
 	* Start and maintain a peeking state until exited
 	**/
 	void ProcessPeek(idEntity *peekEntity, idEntity* door, idVec3 normal); // grayman #4882
-	
+
 	/*!
 	* This method updates the lean by as much of the delta amount given
 	* that does not result in a clip model trace collision.
@@ -866,7 +867,7 @@ protected:
 	* Tests points in space along the lean yaw axis until they come out the other
 	* side of the door into empty space.
 	*
-	* Takes the point of contact (where the trace hit the door), 
+	* Takes the point of contact (where the trace hit the door),
 	*	starts testing at this point, extending along lean yaw axis.
 	*
 	* If a point is found, it sets m_DoorListenPos and returns true
@@ -885,8 +886,8 @@ public:
 	/*!
 	* Starts or ends a lean around and axis which is perpendicular to the gravity normal and
 	* rotated by the given yaw angle clockwise (when looking down in direction of
-	* gravity) around it. 
-	* 
+	* gravity) around it.
+	*
 	* @param[in] leanYawAngleDegrees The angle of the axis around which the player will
 	* lean clockwise, itself rotated clockwise from straight forward.
 	* 0.0 leans right, 180.0 leans left, 90.0 leans forward, 270.0 leans backward
@@ -936,13 +937,13 @@ public:
 	// Shouldering viewport animation (#3607)
 	// by STiFU
 	//#####################################################
-public: 
-		
+public:
+
 	/** @brief	  	Initialize and schedule shouldering animation (#3607)
 	  * @param 		pBody Pointer to the body to be shouldered
 	  * @author		STiFU */
 	void StartShouldering(idEntity const * const pBody);
-	
+
 	/** @brief	  	Check if shouldering animation plays out (#3607)
 	  * @return   	True, if animation is active
 	  * @author		STiFU */
@@ -950,12 +951,12 @@ public:
 
 	bool					m_bMidAir;
 private:
-		
+
 	/** @brief	  	Try to start the shouldering animation (#3607)
 	  * @author		STiFU */
 	void StartShoulderingAnim();
 
-	
+
 	/** @brief	  	Perform the shouldering animation (#3607)
 	  * @author		STiFU */
 	void ShoulderingMove();

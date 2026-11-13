@@ -270,7 +270,7 @@ void OpenXRInput::RegisterSuggestedBindings() {
 			XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING,
 			nullptr,
 			profilePath,
-			bindings.Num(),
+			static_cast<uint32_t>(bindings.Num()),
 			bindings.Ptr(),
 		};
 		result = xrSuggestInteractionProfileBindings( instance, &suggestedBindings );
@@ -283,7 +283,7 @@ void OpenXRInput::AttachActionSets() {
 	XrSessionActionSetsAttachInfo attachInfo {
 		XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO,
 		nullptr,
-		actionSets.Num(),
+		static_cast<uint32_t>(actionSets.Num()),
 		actionSets.Ptr(),
 	};
 	XrResult result = xrAttachSessionActionSets( session, &attachInfo );
@@ -314,7 +314,7 @@ void OpenXRInput::SyncActions( const idList<XrActiveActionSet> &activeSets ) {
 	XrActionsSyncInfo syncInfo {
 		XR_TYPE_ACTIONS_SYNC_INFO,
 		nullptr,
-		activeSets.Num(),
+		static_cast<uint32_t>(activeSets.Num()),
 		activeSets.Ptr(),
 	};
 	XrResult result = xrSyncActions( session, &syncInfo );

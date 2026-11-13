@@ -19,6 +19,7 @@ Project: The Dark Mod (http://www.thedarkmod.com/)
 #include "renderer/backend/FrameBuffer.h"
 #include "renderer/backend/RenderBackend.h"
 #include "renderer/backend/FrameBufferManager.h"
+#include "renderer/vr/OpenXRBackend.h"
 
 idRenderSystemLocal	tr;
 idRenderSystem	*renderSystem = &tr;
@@ -36,7 +37,7 @@ only be called when the back end thread is idle.
 */
 static void R_PerformanceCounters( void ) {
 	TRACE_CPU_SCOPE( "R_PerformanceCounters" );
-	
+
 	if ( r_showPrimitives.GetInteger() != 0 ) {
 
 		int numUsed = -1;
@@ -168,7 +169,8 @@ void R_IssueRenderCommands( frameData_t *frameData, bool swapBuffers ) {
 	// r_skipRender is usually more usefull, because it will still
 	// draw 2D graphics
 	if ( !r_skipBackEnd.GetBool() ) {
-		RB_ExecuteBackEndCommands( cmds );
+		vrBackend->RenderStereoView( frameData );
+		//RB_ExecuteBackEndCommands( cmds );
 	}
 	R_ClearCommandChain( frameData );
 
@@ -532,9 +534,9 @@ void idRenderSystemLocal::DrawSmallChar( int x, int y, int ch, const idMaterial 
 	frow = row * 0.0625f;
 	fcol = col * 0.0625f;
 	size = 0.0625f;
-	
+
 	extern idCVarBool con_legacyFont;
-	if ( con_legacyFont ) 
+	if ( con_legacyFont )
 		DrawStretchPic( x, y, SMALLCHAR_WIDTH, SMALLCHAR_HEIGHT,
 	                fcol, frow,
 	                fcol + size, frow + size,
@@ -759,6 +761,7 @@ void idRenderSystemLocal::EndFrame( int *frontEndMsec, int *backEndMsec ) {
 	try {
 		RB_CopyDebugPrimitivesToBackend();
 		common->SetErrorIndirection( true );
+		vrBackend->PrepareFrame();
 		session->ActivateFrontend();
 		frameBuffers->BeginFrame();
 		// start the back end up again with the new command list
@@ -1090,8 +1093,8 @@ void idRenderSystemLocal::CaptureRenderToBuffer( unsigned char *buffer, bool use
 	if ( session->IsFrontend() ) {
 		common->Error( "CaptureRenderToBuffer called from frontend thread, not supported." );
 	}
-	if ( !glConfig.isInitialized ) { 
-		return; 
+	if ( !glConfig.isInitialized ) {
+		return;
 	}
 	renderCrop_t rc = renderCrops[currentRenderCrop];
 	/*if ( r_useFbo.GetBool() && !usePbo ) { // 4676 duzenko FIXME usePbo has double function
@@ -1113,6 +1116,7 @@ void idRenderSystemLocal::CaptureRenderToBuffer( unsigned char *buffer, bool use
 	cmd.imageHeight = rc.height;
 	cmd.scissor = rc;
 
+	frameData->render2D = true;
 	R_IssueRenderCommands( frameData, false );
 }
 

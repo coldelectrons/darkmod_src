@@ -139,6 +139,11 @@ void idVertexCache::UnbindIndex() {
 	}
 }
 
+void idVertexCache::UnbindVertex() {
+	qglBindBuffer( GL_ARRAY_BUFFER, 0 );
+	currentVertexBuffer = 0;
+}
+
 //================================================================================
 
 geoBufferSet_t::geoBufferSet_t() {}
@@ -159,12 +164,12 @@ void idVertexCache::Init() {
 	// 2.08 core context https://stackoverflow.com/questions/13403807/glvertexattribpointer-raising-gl-invalid-operation
 	GLuint vao;
 	qglGenVertexArrays( 1, &vao );
-	qglBindVertexArray( vao ); 
+	qglBindVertexArray( vao );
 
 	staticVertexBuffer = 0;
 	staticIndexBuffer = 0;
 	staticShadowBuffer = 0;
-	
+
 	AllocGeoBufferSet( dynamicData, currentVertexCacheSize, currentIndexCacheSize );
 	EndFrame();
 }

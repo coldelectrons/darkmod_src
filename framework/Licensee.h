@@ -34,9 +34,9 @@ Project: The Dark Mod (http://www.thedarkmod.com/)
 #define BASE_TDM					"darkmod"
 
 // filenames
-#define CONFIG_FILE					"Darkmod.cfg"
-#define KEYBINDS_FILE				"DarkmodKeybinds.cfg"
-#define PADBINDS_FILE				"DarkmodPadbinds.cfg"
+#define CONFIG_FILE					"darkmod_vr.cfg"
+#define KEYBINDS_FILE				"darkmodkeybinds.cfg"
+#define PADBINDS_FILE				"darkmodpadbinds.cfg"
 
 // base folder where the source code lives
 #define SOURCE_CODE_BASE_FOLDER				"darkmod_src"
@@ -86,4 +86,4 @@ Project: The Dark Mod (http://www.thedarkmod.com/)
 #define	WIN32_FAKE_WINDOW_CLASS_NAME			"TDM_WGL_FAKE"
 
 // Linux info
-#define LINUX_DEFAULT_PATH				"."	
+#define LINUX_DEFAULT_PATH				"."

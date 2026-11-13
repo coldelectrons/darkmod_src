@@ -146,13 +146,13 @@ typedef struct renderEntity_s {
 													// for the gigantic outdoor meshes in the monorail map, so
 													// all the lights in the moving monorail don't touch the meshes
     bool                    isLightgem;             //nbohr1more: #4379 lightgem culling
-	
+
 	bool					noFog;                  //nbohr1more: #3662 noFog for entities
-	
+
 	int						spectrum;				//nbohr1more: #4956 spectrum entity arg
-	
+
 	int						lightspectrum;
-	
+
 	int						nospectrum;
 
 	bool					weaponDepthHack;		// squash depth range so view weapons don't poke into walls
@@ -219,7 +219,7 @@ typedef struct renderLight_s {
 
 	bool					noFogBoundary;		// Stops fogs drawing and fogging their bounding boxes -- SteveL #3664
 	bool                    noPortalFog;		// Prevents fog from prematurely closing portals and snapping off lights, matches the material flag from Doom 3	-- nbohr1more #6282
-	
+
 	int						spectrum;			//nbohr1more: #4956 spectrum entity arg
 	renderEntity_s::areaLock_t areaLock;
 
@@ -238,6 +238,11 @@ typedef enum {							// #define RENDERTOOLS_SKIP_ID			-1 // DARKMOD_LG_VIEWID
 } viewID_t;								// The lightgem viewid defines the viewid that is to be used for the lightgem surfacetestmodel
 										// static const int	DARKMOD_LG_VIEWID =	-1;
 
+typedef struct {
+	idVec3		origin;
+	idMat3		axis;
+} orientation_t;
+
 typedef struct renderView_s {
 	// player views will set this to a non-zero integer for model suppress / allow
 	// subviews (mirrors, cameras, etc) will always clear it to zero
@@ -250,8 +255,11 @@ typedef struct renderView_s {
 	idVec3					vieworg;
 	idMat3					viewaxis;			// transformation matrix, view looks down the positive X axis
 
+	// VR: eye positions
+	idVec3					eyeorg[2];
+
 	bool					cramZNear;			// for cinematics, we want to set ZNear much lower
-	bool					forceUpdate;		// for an update 
+	bool					forceUpdate;		// for an update
 	bool					isOverlay;			// stgatilov: rendered on top of previous color contents, don't clear
 
 	bool					isHighlightedEntityValuable; // stifu: if true, the frob highlighted object is valuable and might be colored differently
@@ -260,6 +268,16 @@ typedef struct renderView_s {
 	int						time;
 	float					shaderParms[MAX_GLOBAL_SHADER_PARMS];		// can be used in any way by shader
 	const idMaterial		*globalMaterial;							// used to override everything draw
+
+	// VR support
+	idVec3					initialVieworg;
+	idMat3					initialViewaxis;
+	bool					fixedOrigin;
+	orientation_t			mirrorSurface;
+	orientation_t			mirrorCamera;
+	bool					isMirrorGen;
+	bool					isMirrorInverted;
+	float					nearZOffset;
 } renderView_t;
 
 
@@ -383,7 +401,7 @@ public:
 	virtual int				GetPortalState( qhandle_t portal ) = 0;
 
 	// stgatilov #5462: returns the plane of the portal, oriented arbitrarily
-	// used to ensure that the origin of door sound is on the right side 
+	// used to ensure that the origin of door sound is on the right side
 	virtual idPlane			GetPortalPlane( qhandle_t portal ) = 0;
 
 	// grayman #3042 - set portal sound loss (in dB)
@@ -476,7 +494,7 @@ public:
 	// the next renderScene
 	virtual bool			ProcessDemoCommand( idDemoFile *readDemo, renderView_t *demoRenderView, int *demoTimeOffset ) = 0;
 
-	// this is used to regenerate all interactions ( which is currently only done during influences ), there may be a less 
+	// this is used to regenerate all interactions ( which is currently only done during influences ), there may be a less
 	// expensive way to do it
 	virtual void			RegenerateWorld() = 0;
 

@@ -17,11 +17,11 @@
 
 idCVar vr_useDebug( "vr_useDebug", "0", CVAR_RENDERER|CVAR_BOOL|CVAR_ARCHIVE, "Enable OpenXR debug functionality" );
 
-bool XR_KHR_opengl_enable_available = false;
-bool XR_KHR_D3D11_enable_available = false;
-bool XR_KHR_visibility_mask_available = false;
-bool XR_EXT_debug_utils_available = false;
-bool XR_EXT_hp_mixed_reality_controller = false;
+bool tdm_XR_KHR_opengl_enable_available = false;
+bool tdm_XR_KHR_D3D11_enable_available = false;
+bool tdm_XR_KHR_visibility_mask_available = false;
+bool tdm_XR_EXT_debug_utils_available = false;
+bool tdm_XR_EXT_hp_mixed_reality_controller = false;
 
 PFN_xrGetOpenGLGraphicsRequirementsKHR qxrGetOpenGLGraphicsRequirementsKHR = nullptr;
 PFN_xrCreateDebugUtilsMessengerEXT qxrCreateDebugUtilsMessengerEXT = nullptr;
@@ -33,7 +33,7 @@ XRAPI_ATTR XrResult XRAPI_CALL xrGetOpenGLGraphicsRequirementsKHR(
     XrInstance                                  instance,
     XrSystemId                                  systemId,
     XrGraphicsRequirementsOpenGLKHR*            graphicsRequirements) {
-	return qxrGetOpenGLGraphicsRequirementsKHR( instance, systemId, graphicsRequirements );	
+	return qxrGetOpenGLGraphicsRequirementsKHR( instance, systemId, graphicsRequirements );
 }
 
 XRAPI_ATTR XrResult XRAPI_CALL xrCreateDebugUtilsMessengerEXT(
@@ -87,7 +87,7 @@ XRAPI_ATTR XrResult XRAPI_CALL xrGetD3D11GraphicsRequirementsKHR(
     XrInstance                                  instance,
     XrSystemId                                  systemId,
     XrGraphicsRequirementsD3D11KHR*             graphicsRequirements) {
-	return qxrGetD3D11GraphicsRequirementsKHR( instance, systemId, graphicsRequirements );	
+	return qxrGetD3D11GraphicsRequirementsKHR( instance, systemId, graphicsRequirements );
 }
 
 void XR_LoadExtensionD3D11( XrInstance instance ) {
@@ -130,25 +130,25 @@ void XR_CheckAvailableExtensions() {
 		common->Printf( "- %s\n", ext.extensionName );
 
 		if ( strcmp( ext.extensionName, XR_KHR_OPENGL_ENABLE_EXTENSION_NAME ) == 0 ) {
-			XR_KHR_opengl_enable_available = true;
+			tdm_XR_KHR_opengl_enable_available = true;
 		}
 #ifdef WIN32
 		if ( strcmp( ext.extensionName, XR_KHR_D3D11_ENABLE_EXTENSION_NAME ) == 0 && GLAD_WGL_NV_DX_interop2 ) {
-			XR_KHR_D3D11_enable_available = true;
+			tdm_XR_KHR_D3D11_enable_available = true;
 		}
 #endif
 		if ( strcmp( ext.extensionName, XR_KHR_VISIBILITY_MASK_EXTENSION_NAME ) == 0 ) {
-			XR_KHR_visibility_mask_available = true;
+			tdm_XR_KHR_visibility_mask_available = true;
 		}
 		if ( strcmp( ext.extensionName, XR_EXT_DEBUG_UTILS_EXTENSION_NAME ) == 0 ) {
-			XR_EXT_debug_utils_available = true;
+			tdm_XR_EXT_debug_utils_available = true;
 		}
 		if ( strcmp( ext.extensionName, "XR_EXT_hp_mixed_reality_controller" ) == 0 ) {
-			XR_EXT_hp_mixed_reality_controller = true;
+			tdm_XR_EXT_hp_mixed_reality_controller = true;
 		}
 	}
 
-	if ( !XR_KHR_opengl_enable_available && !XR_KHR_D3D11_enable_available ) {
+	if ( !tdm_XR_KHR_opengl_enable_available && !tdm_XR_KHR_D3D11_enable_available ) {
 		common->FatalError( "No supported graphics API reported by the OpenXR runtime" );
 	}
 }
@@ -174,32 +174,32 @@ void XR_CheckAvailableApiLayers() {
 }
 
 XrInstance XR_CreateInstance() {
-	XR_KHR_opengl_enable_available = false;
-	XR_KHR_D3D11_enable_available = false;
-	XR_KHR_visibility_mask_available = false;
-	XR_EXT_debug_utils_available = false;
+	tdm_XR_KHR_opengl_enable_available = false;
+	tdm_XR_KHR_D3D11_enable_available = false;
+	tdm_XR_KHR_visibility_mask_available = false;
+	tdm_XR_EXT_debug_utils_available = false;
 	XR_CheckAvailableExtensions();
 	XR_CheckAvailableApiLayers();
 	idList<const char *> enabledExtensions;
-	if ( XR_KHR_opengl_enable_available ) {
+	if ( tdm_XR_KHR_opengl_enable_available ) {
 		enabledExtensions.AddGrow( XR_KHR_OPENGL_ENABLE_EXTENSION_NAME );
 	}
 	if ( !vr_useDebug.GetBool() ) {
-		XR_EXT_debug_utils_available = false;
+		tdm_XR_EXT_debug_utils_available = false;
 	}
 
 #ifdef WIN32
-	if ( XR_KHR_D3D11_enable_available ) {
+	if ( tdm_XR_KHR_D3D11_enable_available ) {
 		enabledExtensions.AddGrow( XR_KHR_D3D11_ENABLE_EXTENSION_NAME );
 	}
 #endif
-	if ( XR_KHR_visibility_mask_available ) {
+	if ( tdm_XR_KHR_visibility_mask_available ) {
 		enabledExtensions.AddGrow( XR_KHR_VISIBILITY_MASK_EXTENSION_NAME );
 	}
-	if ( XR_EXT_debug_utils_available ) {
+	if ( tdm_XR_EXT_debug_utils_available ) {
 		enabledExtensions.AddGrow( XR_EXT_DEBUG_UTILS_EXTENSION_NAME );
 	}
-	if ( XR_EXT_hp_mixed_reality_controller ) {
+	if ( tdm_XR_EXT_hp_mixed_reality_controller ) {
 		enabledExtensions.AddGrow( "XR_EXT_hp_mixed_reality_controller" );
 	}
 	XrInstanceCreateInfo instanceCreateInfo = {
@@ -215,7 +215,7 @@ XrInstance XR_CreateInstance() {
 		},
 		0,
 		nullptr,
-		enabledExtensions.Num(),
+		static_cast<uint32_t>(enabledExtensions.Num()),
 		enabledExtensions.Ptr(),
 	};
 	XrInstance instance;
@@ -233,18 +233,18 @@ XrInstance XR_CreateInstance() {
 		XR_VERSION_MINOR( instanceProperties.runtimeVersion ),
 		XR_VERSION_PATCH( instanceProperties.runtimeVersion ) );
 
-	if ( XR_KHR_opengl_enable_available ) {
+	if ( tdm_XR_KHR_opengl_enable_available ) {
 		XR_LoadExtensionOpenGL( instance );
 	}
 #ifdef WIN32
-	if ( XR_KHR_D3D11_enable_available ) {
+	if ( tdm_XR_KHR_D3D11_enable_available ) {
 		XR_LoadExtensionD3D11( instance );
 	}
 #endif
-	if ( XR_EXT_debug_utils_available ) {
+	if ( tdm_XR_EXT_debug_utils_available ) {
 		XR_LoadExtensionDebug( instance );
 	}
-	if ( XR_KHR_visibility_mask_available ) {
+	if ( tdm_XR_KHR_visibility_mask_available ) {
 		XR_LoadExtensionVisibilityMask( instance );
 	}
 

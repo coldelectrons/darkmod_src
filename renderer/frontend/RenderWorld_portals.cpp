@@ -434,8 +434,8 @@ void idRenderWorldLocal::FloodLightThroughArea_r( FlowLightThroughPortalsContext
 			normal.Cross( v2, v1 );
 			float sinAng = normal.LengthFast() * idMath::RSqrt( v2.LengthSqr() * v1.LengthSqr() );
 			static const float SIN_THRESHOLD = idMath::FLT_EPS / MAX_PLANE_NORMAL_ERROR;
-			if ( sinAng <= SIN_THRESHOLD ) { 
-				continue; 
+			if ( sinAng <= SIN_THRESHOLD ) {
+				continue;
 			}
 			newStack.portalPlanes[newStack.numPortalPlanes].Normal() = normal;
 			newStack.portalPlanes[newStack.numPortalPlanes].Normalize();
@@ -548,7 +548,7 @@ bool idRenderWorldLocal::FloodShadowFrustumThroughArea_r( FloodShadowFrustumCont
 		if ( context.frustum.PlaneSide( p->plane, 0.0f ) != PLANESIDE_CROSS )
 			continue;
 
-		// get the bounds for the portal winding projected in the frustum 
+		// get the bounds for the portal winding projected in the frustum
 		idBounds newBounds;
 		if (!context.frustum.ProjectionBounds( p->w, newBounds ))
 			continue;
@@ -722,8 +722,8 @@ void idRenderWorldLocal::AddAreaEntityRefs( int areaNum, const portalStack_t *ps
 		// check for completely suppressing the model
 		if ( !r_skipSuppress.GetBool() ) {
 			// nbohr1more: #4379 lightgem culling
-			if ( !entity->parms.isLightgem && entity->parms.noShadow && tr.viewDef->IsLightGem() ) { 
-				continue; 
+			if ( !entity->parms.isLightgem && entity->parms.noShadow && tr.viewDef->IsLightGem() ) {
+				continue;
 			}
 			if ( entity->parms.suppressSurfaceInViewID && entity->parms.suppressSurfaceInViewID == tr.viewDef->renderView.viewID ) {
 				continue;
@@ -847,7 +847,7 @@ void idRenderWorldLocal::AddAreaLightRefs( int areaNum, const portalStack_t *ps 
 		if ( r_singleLight.GetInteger() >= 0 && r_singleLight.GetInteger() != light->index ) {
 			continue;
 		}
-		
+
 		// nbohr1more: disable the player in void light optimization when light area culling is disabled
 		if ( r_useLightAreaCulling.GetInteger() ) {
 			if ( tr.viewDef->areaNum < 0 && !light->lightShader->IsAmbientLight() )
@@ -1002,6 +1002,15 @@ void idRenderWorldLocal::FindViewLightsAndEntities( void ) {
 		// be a different point than initialViewAreaOrigin for subviews that
 		// may have the viewOrigin in a solid/invalid area
 		FlowViewThroughPortals( tr.viewDef->renderView.vieworg, 5, tr.viewDef->frustum );
+		if ( tr.viewDef->renderView.eyeorg[0] != tr.viewDef->renderView.vieworg ) {
+			for ( int i = 0; i < 2; ++i ) {
+				if ( tr.viewDef->initialViewAreaOrigin == tr.viewDef->renderView.vieworg ) {
+					tr.viewDef->areaNum = GetAreaAtPoint( tr.viewDef->renderView.eyeorg[i] );
+					BuildConnectedAreas();
+				}
+				FlowViewThroughPortals( tr.viewDef->renderView.eyeorg[i], 5, tr.viewDef->frustum );
+			}
+		}
 	}
 }
 

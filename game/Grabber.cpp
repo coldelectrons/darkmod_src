@@ -65,7 +65,7 @@ END_CLASS
 CGrabber::CGrabber
 ==============
 */
-CGrabber::CGrabber( void ) 
+CGrabber::CGrabber( void )
 {
 	Clear();
 }
@@ -75,7 +75,7 @@ CGrabber::CGrabber( void )
 CGrabber::~CGrabber
 ==============
 */
-CGrabber::~CGrabber( void ) 
+CGrabber::~CGrabber( void )
 {
 	StopDrag();
 	Clear();
@@ -87,7 +87,7 @@ CGrabber::~CGrabber( void )
 CGrabber::Clear
 ==============
 */
-void CGrabber::Clear( void ) 
+void CGrabber::Clear( void )
 {
 	m_dragEnt			= NULL;
 	m_player			= NULL;
@@ -109,7 +109,7 @@ void CGrabber::Clear( void )
 	m_bIsColliding = false;
 	m_bPrevFrameCollided = false;
 	m_CollNorms.Clear();
-	
+
 	m_bAFOffGround = false;
 	m_DragUpTimer = 0;
 	m_AFBodyLastZ = 0.0f;
@@ -160,7 +160,7 @@ void CGrabber::Save( idSaveGame *savefile ) const
 
 	savefile->WriteInt(m_rotationAxis);
 	savefile->WriteVec2(m_mousePosition);
-	
+
 	savefile->WriteInt(m_clipList.Num());
 	for (int i = 0; i < m_clipList.Num(); i++)
 	{
@@ -276,7 +276,7 @@ void CGrabber::Restore( idRestoreGame *savefile )
 CGrabber::Spawn
 ==============
 */
-void CGrabber::Spawn( void ) 
+void CGrabber::Spawn( void )
 {
 	//TODO: Change constants at the start of the file and assign them here
 	//	using spawnArgs.
@@ -287,7 +287,7 @@ void CGrabber::Spawn( void )
 CGrabber::StopDrag
 ==============
 */
-void CGrabber::StopDrag( void ) 
+void CGrabber::StopDrag( void )
 {
 	//stgatilov #5599: allow force class to revert its temporary changes
 	m_drag.SetPhysics( NULL, -1, idVec3() );
@@ -296,7 +296,7 @@ void CGrabber::StopDrag( void )
 	m_bPrevFrameCollided = false;
 	m_CollNorms.Clear();
 	m_bObjStuck = false;
-	
+
 	m_bAFOffGround = false;
 	m_DragUpTimer = 0;
 	m_AFBodyLastZ = 0.0f;
@@ -359,7 +359,7 @@ void CGrabber::StopDrag( void )
 CGrabber::Update
 ==============
 */
-void CGrabber::Update( idPlayer *player, bool hold, bool preservePosition ) 
+void CGrabber::Update( idPlayer *player, bool hold, bool preservePosition )
 {
 	idVec3 viewPoint(vec3_zero), origin(vec3_zero);
 	idVec3 COM(vec3_zero);
@@ -371,7 +371,7 @@ void CGrabber::Update( idPlayer *player, bool hold, bool preservePosition )
 	bool bAttackHeld;
 	idEntity *drag;
 	idPhysics_Player *playerPhys;
-	
+
 	m_silentMode = false;
 	if (cv_drag_new.GetBool()) {
 		//stgatilov #5599: new grabber, detect if we should set silent mode
@@ -392,7 +392,7 @@ void CGrabber::Update( idPlayer *player, bool hold, bool preservePosition )
 	m_player = player;
 
 	// if there is an entity selected, we let it go and exit
-	if( !hold && m_dragEnt.GetEntity() ) 
+	if( !hold && m_dragEnt.GetEntity() )
 	{
 		// ClampVelocity( MAX_RELEASE_LINVEL, MAX_RELEASE_ANGVEL, m_id );
 
@@ -400,7 +400,7 @@ void CGrabber::Update( idPlayer *player, bool hold, bool preservePosition )
 		m_EquippedEnt = NULL;
 
 		StopDrag();
-		
+
 		goto Quit;
 	}
 
@@ -411,10 +411,10 @@ void CGrabber::Update( idPlayer *player, bool hold, bool preservePosition )
 	/*if( playerPhys->OnRope() || playerPhys->OnLadder() )
 		goto Quit;*/
 
-	player->GetViewPos( viewPoint, viewAxis );
+	player->GetFrobPos( viewPoint, viewAxis );
 
 	// if no entity is currently selected for dragging, start grabbing the frobbed entity
-	if ( !m_dragEnt.GetEntity() ) 
+	if ( !m_dragEnt.GetEntity() )
 	{
 		StartDrag( player, NULL, 0, preservePosition ); // preservePosition #4919
 	}
@@ -501,12 +501,12 @@ void CGrabber::Update( idPlayer *player, bool hold, bool preservePosition )
 				targetPosition = targetPosition;
 			}
 		}
-	} 
-	
+	}
+
 	if ( m_bEquippedEntInWorld ) // equipped entities lock in position
 	{
 		targetPosition = m_vEquippedPosition;
-	} 
+	}
 
 
 	draggedPosition = viewPoint + targetPosition * viewAxis;
@@ -521,7 +521,7 @@ if (!cv_drag_new.GetBool()) {
 	if( drag->IsType(idAFEntity_Base::Type) && (cv_drag_AF_free.GetBool() == false) )
 	{
 		idAFEntity_Base *AFPtr = (idAFEntity_Base *) drag;
-		
+
 		if( AFPtr->IsActiveAF() && AFPtr->m_bGroundWhenDragged )
 		{
 			// Quick fix : Do not add player's reference velocity when grounding
@@ -575,7 +575,7 @@ if (!cv_drag_new.GetBool()) {
 				// If somehow this is not set
 				m_bAFOffGround = false;
 			}
-			
+
 		}
 	}
 
@@ -603,20 +603,20 @@ if (!cv_drag_new.GetBool()) {
 	renderEntity = drag->GetRenderEntity();
 	dragAnimator = drag->GetAnimator();
 
-	if ( m_joint != INVALID_JOINT && renderEntity && dragAnimator ) 
+	if ( m_joint != INVALID_JOINT && renderEntity && dragAnimator )
 	{
 		dragAnimator->GetJointTransform( m_joint, gameLocal.time, draggedPosition, axis );
 	}
 
 Quit:
 	m_bPrevFrameCollided = m_bIsColliding;
-	
+
 	// reset this, it gets set by physics if the object collides
 	m_bIsColliding = false;
 	return;
 }
 
-void CGrabber::StartDrag( idPlayer *player, idEntity *newEnt, int bodyID, bool preservePosition ) 
+void CGrabber::StartDrag( idPlayer *player, idEntity *newEnt, int bodyID, bool preservePosition )
 {
 	idVec3 viewPoint, origin, COM, COMWorld, delta2;
 	idEntity *FrobEnt;
@@ -628,10 +628,10 @@ void CGrabber::StartDrag( idPlayer *player, idEntity *newEnt, int bodyID, bool p
 	StopDrag();
 	m_EquippedEnt = NULL;
 
-	player->GetViewPos( viewPoint, viewAxis );
+	player->GetFrobPos( viewPoint, viewAxis );
 
 	// If an entity was not explictly passed in, use the frob entity
-	if ( !newEnt ) 
+	if ( !newEnt )
 	{
 		FrobEnt = player->m_FrobEntity.GetEntity();
 		if ( !FrobEnt )
@@ -642,7 +642,7 @@ void CGrabber::StartDrag( idPlayer *player, idEntity *newEnt, int bodyID, bool p
 		newEnt = FrobEnt;
 
 		trace = player->m_FrobTrace;
-		
+
 		// If the ent was not hit directly and is an AF, we must fill in the joint and body ID
 		if ( (trace.c.entityNum != FrobEnt->entityNumber) && FrobEnt->IsType(idAFEntity_Base::Type) )
 		{
@@ -656,7 +656,7 @@ void CGrabber::StartDrag( idPlayer *player, idEntity *newEnt, int bodyID, bool p
 	}
 
 	bool isHead = false;
-	if ( newEnt->GetBindMaster() ) 
+	if ( newEnt->GetBindMaster() )
 	{
 		// grayman #3631 - If the ent is a head, assign it an invalid joint number.
 		// When the frobbed entity is change to the bindMaster body, this assignment
@@ -673,22 +673,22 @@ void CGrabber::StartDrag( idPlayer *player, idEntity *newEnt, int bodyID, bool p
 				newEnt = bindMaster; // move to the body
 			}
 		}
-	
+
 		if (!isHead)
 		{
-			if ( newEnt->GetBindJoint() ) 
+			if ( newEnt->GetBindJoint() )
 			{
 				trace.c.id = JOINT_HANDLE_TO_CLIPMODEL_ID( newEnt->GetBindJoint() );
 			}
-			else 
+			else
 			{
 				trace.c.id = newEnt->GetBindBody();
 			}
-			newEnt = bindMaster;			
+			newEnt = bindMaster;
 		}
 	}
 
-	if ( newEnt->IsType( idAFEntity_Base::Type ) && static_cast<idAFEntity_Base *>(newEnt)->IsActiveAF() ) 
+	if ( newEnt->IsType( idAFEntity_Base::Type ) && static_cast<idAFEntity_Base *>(newEnt)->IsActiveAF() )
 	{
 		idAFEntity_Base *af = static_cast<idAFEntity_Base *>(newEnt);
 
@@ -696,24 +696,24 @@ void CGrabber::StartDrag( idPlayer *player, idEntity *newEnt, int bodyID, bool p
 		newJoint = CLIPMODEL_ID_TO_JOINT_HANDLE( trace.c.id );
 		// get the body id from the trace model id which might be a joint handle
 		trace.c.id = af->BodyForClipModelId( trace.c.id );
-	} 
-	else if ( !newEnt->IsType( idWorldspawn::Type ) ) 
+	}
+	else if ( !newEnt->IsType( idWorldspawn::Type ) )
 	{
-		if ( trace.c.id < 0 ) 
+		if ( trace.c.id < 0 )
 		{
 			newJoint = CLIPMODEL_ID_TO_JOINT_HANDLE( trace.c.id );
 		}
-		else 
+		else
 		{
 			newJoint = INVALID_JOINT;
 		}
 	}
-	else 
+	else
 	{
 		newJoint = INVALID_JOINT;
 		newEnt = NULL;
 	}
-	
+
 	// If the new entity still wasn't set at this point, it was a frobbed
 	// ent but was found to be invalid.
 
@@ -721,7 +721,7 @@ void CGrabber::StartDrag( idPlayer *player, idEntity *newEnt, int bodyID, bool p
 	{
 		return;
 	}
-	
+
 	// Set up the distance and orientation and stuff
 
 	// get the center of mass
@@ -735,7 +735,7 @@ void CGrabber::StartDrag( idPlayer *player, idEntity *newEnt, int bodyID, bool p
 		idMat3 inertiaTensor;
 		clipModel->GetMassProperties( 1.0f, mass, COM, inertiaTensor );
 	}
-	else 
+	else
 	{
 		// don't drag it if its clipmodel is not a trace model
 		return;
@@ -775,7 +775,7 @@ void CGrabber::StartDrag( idPlayer *player, idEntity *newEnt, int bodyID, bool p
 
 	// prevent collision with player
 	AddToClipList( newEnt );
-	if ( HasClippedEntity() ) 
+	if ( HasClippedEntity() )
 	{
 		PostEventMS( &EV_Grabber_CheckClipList, CHECK_CLIP_LIST_INTERVAL );
 	}
@@ -819,7 +819,7 @@ void CGrabber::ManipulateObject( idPlayer *player ) {
 	idVec3 viewPoint;
 	idMat3 viewAxis;
 
-	player->GetViewPos( viewPoint, viewAxis );
+	player->GetFrobPos( viewPoint, viewAxis );
 
 	idEntity *ent;
 	idVec3 angularVelocity;
@@ -840,7 +840,7 @@ void CGrabber::ManipulateObject( idPlayer *player ) {
 	angularVelocity = vec3_origin;
 
 	// NOTES ON OBJECT ROTATION
-	// 
+	//
 	// The way the object rotation works is as follows:
 	//	1) Player must be holding BUTTON_ZOOM
 	//	2) if the player is holding BUTTON_RUN, rotate about the z-axis
@@ -848,7 +848,7 @@ void CGrabber::ManipulateObject( idPlayer *player ) {
 	//				 else if the mouse first moves along the y axis, rotate about the y-axis
 	//
 	// This system may seem complicated but I found after playing with it for a few minutes
-	// it's quite easy to use.  It also offers some throttling of rotation speed. (Besides, 
+	// it's quite easy to use.  It also offers some throttling of rotation speed. (Besides,
 	// who uses the ZOOM button anyway?)
 	//
 	// If the player releases the ZOOM button rotation slows down.
@@ -856,11 +856,11 @@ void CGrabber::ManipulateObject( idPlayer *player ) {
 	//
 	// If the player holds ZOOM, make the object rotated based on mouse movement.
 	if
-	( 
-		m_bAllowPlayerRotation 
-		&& !ent->IsType( idAFEntity_Base::Type ) 
-		&& player->usercmd.buttons & BUTTON_ZOOM 
-	) 
+	(
+		m_bAllowPlayerRotation
+		&& !ent->IsType( idAFEntity_Base::Type )
+		&& player->usercmd.buttons & BUTTON_ZOOM
+	)
 	{
 
 		float angle = 0.0f;
@@ -868,8 +868,8 @@ void CGrabber::ManipulateObject( idPlayer *player ) {
 
 		// Disable player view change while rotating
 		player->SetImmobilization( "Grabber", player->GetImmobilization("Grabber") | EIM_VIEW_ANGLE );
-		
-		if( !this->DeadMouse() || player->usercmd.jx != 0 || player->usercmd.jy != 0 ) 
+
+		if( !this->DeadMouse() || player->usercmd.jx != 0 || player->usercmd.jy != 0 )
 		{
 			float xMag, yMag;
 			idVec3 xAxis, yAxis;
@@ -899,7 +899,7 @@ void CGrabber::ManipulateObject( idPlayer *player ) {
 		// ignore the change in player pitch angles
 		viewAnglesXY[0] = 0;
 		idMat3 viewAxisXY = viewAnglesXY.ToMat3();
-		
+
 		rotationVec = rotationVec * viewAxisXY;
 		rotationVec.Normalize();
 
@@ -919,7 +919,7 @@ void CGrabber::ManipulateObject( idPlayer *player ) {
 			m_StoppingPreserving = true;
 		}
 	}
-	else 
+	else
 	{
 		rotating = false;
 
@@ -941,7 +941,7 @@ void CGrabber::ManipulateObject( idPlayer *player ) {
 
 // ============== rotate object so it stays oriented with the player ===========
 
-	if( !ent->IsType( idAFEntity_Base::Type ) && !rotating && !m_bIsColliding ) 
+	if( !ent->IsType( idAFEntity_Base::Type ) && !rotating && !m_bIsColliding )
 	{
 		idVec3	normal;
 		float	deltaYawAng(0), deltaPitchAng(0);
@@ -949,7 +949,7 @@ void CGrabber::ManipulateObject( idPlayer *player ) {
 
 		deltaYawAng = static_cast<idPhysics_Player *>(player->GetPhysics())->GetDeltaViewYaw();
 		m_rotation.Set(m_drag.GetCenterOfMass(), normal, deltaYawAng );
-		
+
 		// rotate the object directly
 		trace_t trResults;
 		physics->ClipRotation( trResults, m_rotation, NULL );
@@ -967,15 +967,15 @@ void CGrabber::ManipulateObject( idPlayer *player ) {
 		{
 			idVec3 dummy;
 			deltaPitchAng = static_cast<idPhysics_Player *>(player->GetPhysics())->GetDeltaViewPitch();
-			
+
 			player->viewAngles.ToVectors( &dummy, &normal, &dummy );
 			m_rotation.Set(m_drag.GetCenterOfMass(), normal, deltaPitchAng );
-			
+
 			// rotate the object directly
 			physics->ClipRotation( trResults, m_rotation, NULL );
 			physics->Rotate( m_rotation * trResults.fraction );
 		}
-		
+
 		// Update the axis again since we rotated
 		m_drag.SetDragAxis( ent->GetPhysics()->GetAxis( m_id ) );
 	}
@@ -986,7 +986,7 @@ void CGrabber::ManipulateObject( idPlayer *player ) {
 CGrabber::DeadMouse
 ==============
 */
-bool CGrabber::DeadMouse( void ) 
+bool CGrabber::DeadMouse( void )
 {
 	// check mouse is in the deadzone along the x-axis or the y-axis
 	if( idMath::Fabs( m_player.GetEntity()->usercmd.mx - m_mousePosition.x ) > MOUSE_DEADZONE ||
@@ -1001,7 +1001,7 @@ bool CGrabber::DeadMouse( void )
 CGrabber::AddToClipList
 ==============
 */
-void CGrabber::AddToClipList( idEntity *ent ) 
+void CGrabber::AddToClipList( idEntity *ent )
 {
 	if( !ent )
 		return;
@@ -1026,14 +1026,14 @@ void CGrabber::AddToClipList( idEntity *ent )
 		phys->SetClipMask( phys->GetClipMask() | CONTENTS_SOLID );
 		bAddToList = true;
 	}
-	
-	// Clear the solid flag to avoid player collision, 
+
+	// Clear the solid flag to avoid player collision,
 	// but enable monsterclip for AI, rendermodel for projectiles and corpse for moveables
 	// clear the opaque flag so that AI can see through carried items
 	if( contents & (CONTENTS_SOLID|CONTENTS_CORPSE) )
 	{
 		phys->SetContents
-		( 
+		(
 			(contents & ~(CONTENTS_SOLID | CONTENTS_OPAQUE))
 			| CONTENTS_MONSTERCLIP | CONTENTS_RENDERMODEL | CONTENTS_CORPSE
 		);
@@ -1066,7 +1066,7 @@ void CGrabber::AddToClipList( idEntity *ent )
 CGrabber::RemoveFromClipList
 ==============
 */
-void CGrabber::RemoveFromClipList( int index ) 
+void CGrabber::RemoveFromClipList( int index )
 {
 	// remove the entity and reset the clipMask
 	if( index != -1)
@@ -1094,7 +1094,7 @@ void CGrabber::RemoveFromClipList(idEntity* entity)
 			break;
 		}
 	}
-	
+
 	if( !this->HasClippedEntity() ) {
 		// cancel CheckClipList because the list is empty
 		this->CancelEvents( &EV_Grabber_CheckClipList );
@@ -1106,18 +1106,18 @@ void CGrabber::RemoveFromClipList(idEntity* entity)
 CGrabber::Event_CheckClipList
 ==============
 */
-void CGrabber::Event_CheckClipList( void ) 
+void CGrabber::Event_CheckClipList( void )
 {
 	idEntity *ListEnt(NULL);
 	idClipModel *PlayerClip(NULL), *EntClip(NULL);
 	trace_t tr;
 	bool keep;
-	int i;	
+	int i;
 
 	// Check for any entity touching the players bounds
 	// If the entity is not in our list, remove it.
 	// num = gameLocal.clip.EntitiesTouchingBounds( m_player.GetEntity()->GetPhysics()->GetAbsBounds(), CONTENTS_SOLID, ent );
-	for( i = 0; i < m_clipList.Num(); i++ ) 
+	for( i = 0; i < m_clipList.Num(); i++ )
 	{
 		// Check clipEntites against entities touching player
 		ListEnt = m_clipList[i].m_ent.GetEntity();
@@ -1128,31 +1128,31 @@ void CGrabber::Event_CheckClipList( void )
 			//DM_LOG(LC_AI,LT_DEBUG)LOGSTRING("GRABBER CLIPLIST: Removing NULL entity from cliplist\r" );
 			keep = false;
 		}
-		// We keep an entity if it is the one we're dragging 
-		else if( GetSelected() == ListEnt || (ListEnt->GetBindMaster() && GetSelected() == ListEnt->GetBindMaster()) ) 
+		// We keep an entity if it is the one we're dragging
+		else if( GetSelected() == ListEnt || (ListEnt->GetBindMaster() && GetSelected() == ListEnt->GetBindMaster()) )
 		{
 			//DM_LOG(LC_AI,LT_DEBUG)LOGSTRING("GRABBER CLIPLIST: Keeping entity %s in cliplist as it is currently selected\r", ListEnt->name.c_str() );
 			keep = true;
 		}
-		else 
+		else
 		{
 			keep = false;
 
 			// OR if it's currently touching the player
-			if( m_player.GetEntity() 
+			if( m_player.GetEntity()
 				&& (EntClip = ListEnt->GetPhysics()->GetClipModel()) != NULL )
 			{
 				//DM_LOG(LC_AI,LT_DEBUG)LOGSTRING("GRABBER CLIPLIST: Testing entity %s for player clipping\r", ListEnt->name.c_str() );
 				PlayerClip = m_player.GetEntity()->GetPhysics()->GetClipModel();
 				idVec3 PlayerOrigin = PlayerClip->GetOrigin();
-				
+
 				// test if player model clips into ent model
 				gameLocal.clip.TranslationModel
-				( 
+				(
 					tr, PlayerOrigin, PlayerOrigin,
 					PlayerClip, PlayerClip->GetAxis(), CONTENTS_RENDERMODEL,
-					EntClip->Handle(), EntClip->GetOrigin(), 
-					EntClip->GetAxis() 
+					EntClip->Handle(), EntClip->GetOrigin(),
+					EntClip->GetAxis()
 				);
 
 				if( tr.fraction < 1.0 )
@@ -1169,20 +1169,20 @@ void CGrabber::Event_CheckClipList( void )
 		}
 
 		// Note we have to decrement i otherwise we skip entities
-		if( !keep ) 
+		if( !keep )
 		{
 			this->RemoveFromClipList( i );
 			i -= 1;
 		}
 	}
 
-	if( this->HasClippedEntity() ) 
+	if( this->HasClippedEntity() )
 	{
 		this->PostEventMS( &EV_Grabber_CheckClipList, CHECK_CLIP_LIST_INTERVAL );
 	}
 }
 
-void CGrabber::SetPhysicsFromDragEntity() 
+void CGrabber::SetPhysicsFromDragEntity()
 {
 	if (m_dragEnt.GetEntity() != NULL)
 	{
@@ -1196,14 +1196,14 @@ CGrabber::IsInClipList
 ==============
 */
 // TODO / FIXME: Will this work if we don't set the matching contents and clipmask also?
-bool CGrabber::IsInClipList( idEntity *ent ) const 
+bool CGrabber::IsInClipList( idEntity *ent ) const
 {
 	CGrabbedEnt obj;
-	
+
 	obj.m_ent = ent;
 
 	// check if the entity is in the clipList
-	if( m_clipList.FindIndex( obj ) == -1 ) 
+	if( m_clipList.FindIndex( obj ) == -1 )
 	{
 		return false;
 	}
@@ -1254,13 +1254,13 @@ void CGrabber::Throw( int HeldTime )
 	ClampVelocity( MAX_RELEASE_LINVEL, MAX_RELEASE_ANGVEL, m_id );
 
 	// Only apply the impulse for throwable items
-	if (ent->spawnArgs.GetBool("throwable", "1")) 
+	if (ent->spawnArgs.GetBool("throwable", "1"))
 	{
 		ThrowPoint = ent->GetPhysics()->GetOrigin(m_id) + ent->GetPhysics()->GetAxis(m_id) * m_LocalEntPoint;
 		// tels
 		// add a small random offset to ThrowPoint, so the object tumbles
-		TumbleVec[0] += (gameLocal.random.RandomFloat() / 20) - 0.025; 
-		TumbleVec[1] += (gameLocal.random.RandomFloat() / 20) - 0.025; 
+		TumbleVec[0] += (gameLocal.random.RandomFloat() / 20) - 0.025;
+		TumbleVec[1] += (gameLocal.random.RandomFloat() / 20) - 0.025;
 		TumbleVec[2] += (gameLocal.random.RandomFloat() / 20) - 0.025;
 		// scale the offset by the mass, so lightweight objects don't spin too much
 		TumbleVec *= (mass / 2.0);
@@ -1300,23 +1300,23 @@ void CGrabber::ClampVelocity(float maxLin, float maxAng, int idVal)
 void CGrabber::IncrementDistance( bool bIncrease )
 {
 	if ( !m_dragEnt.GetEntity() || !m_bAllowPlayerTranslation )
-	{ 
-		return; 
+	{
+		return;
 	}
-	
+
 	// #4149. Let the item now go to standard hold position, because player is manipulating it
-	if ( PreservingPosition() ) 
+	if ( PreservingPosition() )
 	{
 		// No more overriding, the distance is changing so it'll snap to position from now on.
-		m_StoppingPreserving = true; 
-		// The m_DistanceCount in this situation will always be <= the original depth of the 
+		m_StoppingPreserving = true;
+		// The m_DistanceCount in this situation will always be <= the original depth of the
 		// picked-up item. So if the player is pulling the item closer, don't change it the first time.
-		if ( !bIncrease ) 
-		{ 
-			return; 
+		if ( !bIncrease )
+		{
+			return;
 		}
 	}
-	
+
 	m_DistanceCount += bIncrease ? 1 : -1;
 	m_DistanceCount = idMath::ClampInt( 0, m_MaxDistCount, m_DistanceCount );
 }
@@ -1345,10 +1345,10 @@ bool CGrabber::PutInHandsAtPoint(idEntity *ent, idVec3 point, idMat3 axis, int b
 	targetCOM = point;
 
 	bReturnVal = FitsInWorld( ent, viewPoint, targetCOM, axis, bodyID );
-	
+
 	if( !bReturnVal )
 		return false;
-	
+
 	ent->SetAxis( axis );
 
 	// teleport in the object, put its center of mass at the target point
@@ -1357,7 +1357,7 @@ bool CGrabber::PutInHandsAtPoint(idEntity *ent, idVec3 point, idMat3 axis, int b
 	idPhysics *phys = ent->GetPhysics();
 
 	ClipModel = phys->GetClipModel( bodyID );
-	if( ClipModel && ClipModel->IsTraceModel() ) 
+	if( ClipModel && ClipModel->IsTraceModel() )
 	{
 		float mass;
 		idMat3 inertiaTensor;
@@ -1365,7 +1365,7 @@ bool CGrabber::PutInHandsAtPoint(idEntity *ent, idVec3 point, idMat3 axis, int b
 	}
 
 	idVec3 orig = targetCOM - ( phys->GetAxis( bodyID ) * COMLocal );
-	
+
 	// if this is not body 0 on an AF, need an additional offset to put desired body in hand
 	// (already taken into account in the FitsInWorld clipping test)
 	if( bodyID > 0 )
@@ -1419,7 +1419,7 @@ bool CGrabber::FitsInWorld( idEntity *ent, idVec3 viewPoint, idVec3 point, idMat
 	idClipModel *ClipModel = NULL;
 
 	ClipModel = phys->GetClipModel( bodyID );
-	if( ClipModel && ClipModel->IsTraceModel() ) 
+	if( ClipModel && ClipModel->IsTraceModel() )
 	{
 		float mass;
 		idMat3 inertiaTensor;
@@ -1465,13 +1465,13 @@ bool CGrabber::FitsInWorld( idEntity *ent, idVec3 viewPoint, idVec3 point, idMat
 		collisionModelManager->DrawModel
 		(
 			ClipModel->Handle(), clipOrig + trans2, ClipModel->GetAxis(),
-			gameLocal.GetLocalPlayer()->GetEyePosition(), idMath::INFINITY 
+			gameLocal.GetLocalPlayer()->GetEyePosition(), idMath::INFINITY
 		);
 		*/
 
 		// first try a zero-motion translation to see if we start out in solid
 		gameLocal.clip.Translation
-		( 
+		(
 			tr, clipOrig + trans1, clipOrig + trans1,
 			ClipModel, ClipModel->GetAxis(), ContentsMask,
 			m_player.GetEntity()
@@ -1484,7 +1484,7 @@ bool CGrabber::FitsInWorld( idEntity *ent, idVec3 viewPoint, idVec3 point, idMat
 
 		// start out okay, do the real translation
 		gameLocal.clip.Translation
-		( 
+		(
 			tr, clipOrig + trans1, clipOrig + trans2,
 			ClipModel, ClipModel->GetAxis(), ContentsMask,
 			m_player.GetEntity()
@@ -1538,7 +1538,7 @@ void CGrabber::CheckStuck( void )
 	float lensqr, maxsqr;
 	idEntity *ent = m_dragEnt.GetEntity();
 	bool bColliding(false);
-	
+
 	if( ent->IsType(idAFEntity_Base::Type) )
 		bColliding = ent->GetPhysics()->GetNumContacts() > 0;
 	else
@@ -1563,7 +1563,7 @@ void CGrabber::SetDragEncumbrance( void )
 {
 	int Immobilizations(0);
 	float encumbrance(0.0f), mass(0.0f), minmass(0.0f), maxmass(0.0f);
-	
+
 	idPlayer *player = m_player.GetEntity();
 
 	if( !player )
@@ -1589,7 +1589,7 @@ void CGrabber::SetDragEncumbrance( void )
 		mass = maxmass;
 
 	encumbrance = 1.0f - ((mass - minmass)/(maxmass - minmass) * ( 1.0f - cv_drag_encumber_max.GetFloat() ));
-		
+
 	// Set movement encumbrance
 	player->SetHinderance( "Grabber", 1.0f, encumbrance );
 
@@ -1678,7 +1678,7 @@ bool CGrabber::EquipEntity( idEntity *ent )
 		gameLocal.Printf("Equipping item in world\n");
 
 		m_vEquippedPosition = ent->spawnArgs.GetVector("equip_position");
-		
+
 		// rotate initially to the desired equipped axis (relative to player)
 		idAngles EqAngles = ent->spawnArgs.GetAngles("equip_angles");
 		idMat3 EqAxis = EqAngles.ToMat3();
@@ -1739,7 +1739,7 @@ bool CGrabber::EquipEntity( idEntity *ent )
 		}
 
 		// non-shoulderable AF entity, did not equip this one
-		return false; 
+		return false;
 	}
 	else
 	{
@@ -1795,7 +1795,7 @@ bool CGrabber::Dequip( void )
 
 	// tels: Execute a potential dequip script
 	if ( ( bDequipped || bRunScript ) && ent->spawnArgs.GetString("dequip_action_script", "", str))
-	{ 
+	{
 		// Call the script
 	    idThread* thread = CallScriptFunctionArgs(str.c_str(), true, 0, "e", ent);
 		if ( thread != NULL )
@@ -1840,7 +1840,7 @@ bool CGrabber::Dequip( void )
 		}
 
 		m_EquippedEnt = NULL;
-		
+
 		// failsafe, doesn't seem to be reset properly
 		m_bEquippedEntInWorld = false;
 		m_bMaintainPitch = true;
@@ -1853,7 +1853,7 @@ void CGrabber::UseEquipped( void )
 {
 	idStr str;
 	idEntity *ent = GetEquipped();
-	
+
 	if ( !ent )
 	{
 		return;
@@ -1862,7 +1862,7 @@ void CGrabber::UseEquipped( void )
 	gameLocal.Printf("Use equipped called\n");
 
     if (ent->spawnArgs.GetString("equipped_use_script", "", str))
-	{ 
+	{
 		gameLocal.Printf("Use equipped found script\n");
 		// Call the script
         idThread* thread = CallScriptFunctionArgs(str.c_str(), true, 0, "e", ent);
@@ -1959,7 +1959,7 @@ idEntity* CGrabber::GetShouldered( void ) const
 	// we can only shoulder AF entities, so if the equipped entity is one of these, it is shouldered
 	return (ent && ent->spawnArgs.GetBool("shoulderable") && ent->IsType(idAFEntity_Base::Type)) ? ent : NULL;
 }
-	
+
 bool CGrabber::IsInSilentMode( void ) const
 {
 	return m_silentMode;

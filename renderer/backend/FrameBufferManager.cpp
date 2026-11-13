@@ -18,6 +18,7 @@ Project: The Dark Mod (http://www.thedarkmod.com/)
 #include "renderer/tr_local.h"
 #include "renderer/backend/FrameBufferManager.h"
 #include "renderer/backend/FrameBuffer.h"
+#include "renderer/vr/OpenXRBackend.h"
 
 FrameBufferManager frameBuffersImpl;
 FrameBufferManager *frameBuffers = &frameBuffersImpl;
@@ -93,7 +94,7 @@ void FrameBufferManager::PurgeAll() {
 
 void FrameBufferManager::BeginFrame() {
 	if (
-		r_multiSamples.IsModified() || 
+		r_multiSamples.IsModified() ||
 		r_fboResolution.IsModified() ||
 		r_fboColorBits.IsModified() ||
 		r_fboDepthBits.IsModified() ||
@@ -142,6 +143,9 @@ void FrameBufferManager::LeavePrimary(bool copyToDefault) {
 	// if we want to do tonemapping later, we need to continue to render to a texture,
 	// otherwise we can render the remaining UI views straight to the back buffer
 	FrameBuffer *targetFbo = frameBuffers->tonemapNotYet ? guiFbo : defaultFbo;
+	if ( vrBackend->UseRadialDensityMask() ) {
+		targetFbo = resolveFbo;
+	}
 	if (currentRenderFbo == targetFbo) return;
 
 	currentRenderFbo = targetFbo;
@@ -216,7 +220,9 @@ void FrameBufferManager::LeaveShadowMap() {
 }
 
 void FrameBufferManager::ResolvePrimary( GLbitfield mask, GLenum filter ) {
-	primaryFbo->BlitTo( resolveFbo, mask, filter );
+	// primaryFbo->BlitTo( resolveFbo, mask, filter );
+	const idScreenRect &vp = backEnd.viewDef->viewport;
+	primaryFbo->BlitTo( resolveFbo, vp.x1, vp.y1, vp.x2, vp.y2, vp.x1, vp.y1, vp.x2, vp.y2, mask, filter );
 }
 
 void FrameBufferManager::UpdateCurrentRenderCopy() {
@@ -238,7 +244,8 @@ void FrameBufferManager::CopyRender( const copyRenderCommand_t &cmd ) {
 	}
 	int backEndStartTime = Sys_Milliseconds();
 
-	if ( activeFbo == defaultFbo ) { // #4425: not applicable, raises gl errors
+	// if ( activeFbo == defaultFbo ) { // #4425: not applicable, raises gl errors
+	if ( activeFbo->IsDefault() ) { // #4425: not applicable, raises gl errors
 		qglReadBuffer( GL_BACK );
 	}
 
@@ -271,7 +278,7 @@ void FrameBufferManager::UpdateResolutionAndFormats() {
 
 void FrameBufferManager::CreatePrimary( FrameBuffer *primary ) {
 	int msaa = r_multiSamples.GetInteger();
-	primary->Init( renderWidth, renderHeight, msaa );	
+	primary->Init( renderWidth, renderHeight, msaa );
 	primary->AddColorRenderBuffer( 0, colorFormat );
 	primary->AddDepthStencilRenderBuffer( depthStencilFormat );
 }
@@ -471,4 +478,3 @@ idList<renderCrop_t> FrameBufferManager::CreateShadowMapPages( const idList<int>
 
 	return result;
 }
-

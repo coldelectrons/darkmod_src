@@ -23,6 +23,7 @@
 #endif
 #ifdef __linux__
 #define XR_USE_PLATFORM_XLIB 1
+#define XR_USE_PLATFORM_WAYLAND 1
 #endif
 #include <openxr/openxr_platform.h>
 
@@ -31,6 +32,10 @@ extern bool XR_KHR_D3D11_enable_available;
 extern bool XR_KHR_visibility_mask_available;
 extern bool XR_EXT_debug_utils_available;
 
+extern PFN_xrGetOpenGLGraphicsRequirementsKHR qxrGetOpenGLGraphicsRequirementsKHR;
+extern PFN_xrCreateDebugUtilsMessengerEXT qxrCreateDebugUtilsMessengerEXT;
+extern PFN_xrDestroyDebugUtilsMessengerEXT qxrDestroyDebugUtilsMessengerEXT;
+extern PFN_xrGetVisibilityMaskKHR qxrGetVisibilityMaskKHR;
+
 void XR_CheckResult( XrResult result, const char *description, XrInstance instance = nullptr, bool fatal = true );
 XrInstance XR_CreateInstance();
-

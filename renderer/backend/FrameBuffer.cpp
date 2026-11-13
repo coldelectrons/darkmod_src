@@ -75,7 +75,7 @@ void FrameBuffer::Destroy() {
 void FrameBuffer::AddColorRenderBuffer( int attachment, GLenum format ) {
 	if (attachment < 0 || attachment >= MAX_COLOR_ATTACHMENTS) {
 		common->Error( "Trying to add color attachment to a framebuffer outside valid range" );
-	}	
+	}
 
 	AddRenderBuffer( colorRenderBuffers[attachment], GL_COLOR_ATTACHMENT0 + attachment, format, name + "_color" + attachment );
 }
@@ -83,7 +83,7 @@ void FrameBuffer::AddColorRenderBuffer( int attachment, GLenum format ) {
 void FrameBuffer::AddColorRenderTexture( int attachment, idImage *texture, int mipLevel ) {
 	if (attachment < 0 || attachment >= MAX_COLOR_ATTACHMENTS) {
 		common->Error( "Trying to add color attachment to a framebuffer outside valid range" );
-	}	
+	}
 
 	AddRenderTexture( texture, GL_COLOR_ATTACHMENT0 + attachment, mipLevel );
 }
@@ -191,6 +191,14 @@ void FrameBuffer::Bind() {
 
 void FrameBuffer::BlitTo( FrameBuffer *target, GLbitfield mask, GLenum filter ) {
 	BlitToVidSize(target, mask, filter, 0, 0, glConfig.vidWidth, glConfig.vidHeight);
+}
+
+// VR ???
+void FrameBuffer::BlitTo( FrameBuffer *target, uint srcX1, uint srcY1, uint srcX2, uint srcY2, uint dstX1, uint dstY1,
+		uint dstX2, uint dstY2, GLbitfield mask, GLenum filter ) {
+	if (target == this) {
+		return;
+	}
 }
 
 void FrameBuffer::BlitToVidSize(FrameBuffer *target, GLbitfield mask, GLenum filter, int x, int y, int w, int h) {
@@ -302,8 +310,11 @@ void FrameBuffer::AddRenderTexture( idImage *texture, GLenum attachment, int mip
 	qglFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, texture->texnum, mipLevel);
 }
 
-
 idCVar r_fboResolution( "r_fboResolution", "1", CVAR_RENDERER | CVAR_FLOAT | CVAR_ARCHIVE, "internal rendering resolution factor" );
+
+void FB_RenderTexture(idImage *texture) {
+	texture->type = TT_2D;
+}
 
 void FB_ApplyViewport() {
 	GL_ViewportVidSize(

@@ -41,6 +41,9 @@ Project: The Dark Mod (http://www.thedarkmod.com/)
 #define GL_ARB_texture_storage					1	//core since 4.2
 #define GL_ARB_multi_draw_indirect				1	//core since 4.3
 #define GL_ARB_vertex_attrib_binding			1	//core since 4.3
+#define GL_NV_shading_rate_image				1
+#define GL_ARB_compute_shader					1	//core since 4.3
+#define GL_ARB_shader_image_load_store			1	//core since 4.2
 #include "glad.h"
 
 #ifdef _WIN32

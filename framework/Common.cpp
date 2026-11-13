@@ -557,7 +557,7 @@ prints message that only shows up if the "developer" cvar is set
 void idCommonLocal::DPrintf( const char *fmt, ... ) {
 	va_list		argptr;
 	char		msg[MAX_PRINT_MSG_SIZE];
-		
+
 	if ( !cvarSystem->IsInitialized() || !com_developer.GetBool() ) {
 		return;			// don't confuse non-developers with techie stuff...
 	}
@@ -566,7 +566,7 @@ void idCommonLocal::DPrintf( const char *fmt, ... ) {
 	idStr::vsnPrintf( msg, sizeof(msg), fmt, argptr );
 	va_end( argptr );
 	msg[sizeof(msg)-1] = '\0';
-	
+
 	// never refresh the screen, which could cause reentrency problems
 	bool temp = com_refreshOnPrint;
 	com_refreshOnPrint = false;
@@ -586,7 +586,7 @@ prints warning message in yellow that only shows up if the "developer" cvar is s
 void idCommonLocal::DWarning( const char *fmt, ... ) {
 	va_list		argptr;
 	char		msg[MAX_PRINT_MSG_SIZE];
-		
+
 	if ( !com_developer.GetBool() ) {
 		return;			// don't confuse non-developers with techie stuff...
 	}
@@ -630,7 +630,7 @@ prints WARNING %s and adds the warning message to a queue to be printed later on
 void idCommonLocal::Warning( const char *fmt, ... ) {
 	va_list		argptr;
 	char		msg[MAX_PRINT_MSG_SIZE];
-		
+
 	va_start( argptr, fmt );
 	idStr::vsnPrintf( msg, sizeof(msg), fmt, argptr );
 	va_end( argptr );
@@ -973,7 +973,7 @@ idCommonLocal::ParseCommandLine
 void idCommonLocal::ParseCommandLine( int argc, const char **argv ) {
 
 	com_numConsoleLines = 0;
-	
+
     // API says no program path
 	for ( int i = 0; i < argc; i++ ) {
 		if ( argv[ i ][ 0 ] == '+' ) {
@@ -993,13 +993,13 @@ void idCommonLocal::InitGameArguments(idStrList *newModsList) {
 	bool fsGameBaseDefined = false;
 	bool fsBasePathDefined = false;
 	idStr basePath = Sys_DefaultBasePath(); // might be overridden by the arguments below
-	
+
     // taaaki - while we want to be able to support mods in the future, I want to limit
     //          this ability until the TDM and D3 source merge is in a better state.
     bool enableMods = true;
     idStr fsGameBase = BASE_TDM;
     fsGameBaseDefined = true;
-    
+
 	// Search the command line arguments for certain override parameters
 	for (int line = 0; line < com_numConsoleLines; ++line) {
 		const idCmdArgs& args = com_consoleLines[line];
@@ -1011,7 +1011,7 @@ void idCommonLocal::InitGameArguments(idStrList *newModsList) {
 				fsGameBaseDefined = true;
 				fsGameBase = (args.Argc() > arg + 1) ? args.Argv(arg + 1) : "";
 			}
-			
+
 			if (idStr::Cmp(args.Argv(arg), "fs_basepath") == 0) {
 				fsBasePathDefined = true;
 				basePath = (args.Argc() > arg + 1) ? args.Argv(arg + 1) : "";
@@ -1024,7 +1024,7 @@ void idCommonLocal::InitGameArguments(idStrList *newModsList) {
     if ( idStr::Icmp( fsGameBase.c_str(), BASE_TDM ) ) {
         darkmodPath.AppendPath(fsGameBase);
     }
-	
+
 	if ( !fsGameDefined ) {
 		// no fs_currentfm defined, try to load the currentfm.txt from darkmod
 		idStr currentModFile = darkmodPath;
@@ -1125,7 +1125,7 @@ void idCommonLocal::InitGameArguments(idStrList *newModsList) {
         }
     }
 
-	// If we still don't have fs_currentfm or the fm directory does not 
+	// If we still don't have fs_currentfm or the fm directory does not
     // exist, fall back to "darkmod"
 	if ( !fsGameDefined ) {
 		cvarSystem->SetCVarString("fs_currentfm", BASE_TDM);
@@ -1184,7 +1184,7 @@ void idCommonLocal::CheckToolMode( void ) {
 		else if ( !idStr::Icmp( com_consoleLines[ i ].Argv(0), "materialEditor" ) ) {
 			com_editors |= EDITOR_MATERIAL;
 		}
-		
+
 		if ( !idStr::Icmp( com_consoleLines[ i ].Argv(0), "renderbump" )
 			|| !idStr::Icmp( com_consoleLines[ i ].Argv(0), "editor" )
 			|| !idStr::Icmp( com_consoleLines[ i ].Argv(0), "guieditor" )
@@ -1299,7 +1299,7 @@ void idCommonLocal::ActivateTool( bool active ) {
 idCommonLocal::WriteConfigToFile
 ==================
 */
-void idCommonLocal::WriteConfigToFile( 
+void idCommonLocal::WriteConfigToFile(
 	const char*		filename,
 	eConfigExport	configexport,
 	const char*		basePath
@@ -1482,7 +1482,7 @@ static void PrintMemInfo_f( const idCmdArgs &args ) {
 		return;
 	}
 
-	f->Printf( "total(%s ) image(%s ) model(%s ) sound(%s ): %s\n", idStr::FormatNumber( mi.assetTotals ).c_str(), idStr::FormatNumber( mi.imageAssetsTotal ).c_str(), 
+	f->Printf( "total(%s ) image(%s ) model(%s ) sound(%s ): %s\n", idStr::FormatNumber( mi.assetTotals ).c_str(), idStr::FormatNumber( mi.imageAssetsTotal ).c_str(),
 		idStr::FormatNumber( mi.modelAssetsTotal ).c_str(), idStr::FormatNumber( mi.soundAssetsTotal ).c_str(), mi.filebase.c_str() );
 
 	fileSystem->CloseFile( f );
@@ -1801,7 +1801,7 @@ void idCommonLocal::LocalizeGui( const char *fileName, idLangDict &langDict ) {
 	if ( fileSystem->ReadFile( fileName, (void**)&buffer ) > 0 ) {
         src.LoadMemory(buffer, static_cast<int>(strlen(buffer)), fileName);
 		if ( src.IsLoaded() ) {
-			idFile *outFile = fileSystem->OpenFileWrite( fileName ); 
+			idFile *outFile = fileSystem->OpenFileWrite( fileName );
 			common->Printf( "Processing %s\n", fileName );
 			session->UpdateScreen();
 			idToken token;
@@ -2005,7 +2005,7 @@ int LocalizeMap(const char* mapName, idLangDict &langDict, ListHash& listHash, i
 	common->Printf("Localizing Map '%s'\n", mapName);
 
 	int strCount = 0;
-	
+
 	idMapFile map;
 	if ( map.Parse(mapName, false, false ) ) {
 		int count = map.GetNumEntities();
@@ -2025,7 +2025,7 @@ int LocalizeMap(const char* mapName, idLangDict &langDict, ListHash& listHash, i
 					for( int k = 0; k < list->Num(); k++ ) {
 
 						idStr val = ent->epairs.GetString((*list)[k], "");
-						
+
 						if ( val.Length() && classname == "info_location" && (*list)[k] == "location" ) {
 							hasLocation = true;
 						}
@@ -2068,7 +2068,7 @@ int LocalizeMap(const char* mapName, idLangDict &langDict, ListHash& listHash, i
 			idStr bak = file.Left(file.Length() - 4);
 			bak.Append(".bak_loc");
 			fileSystem->CopyFile( file, bak );
-			
+
 			map.Write( mapName, ".map" );
 		}
 	}
@@ -2113,7 +2113,7 @@ void Com_LocalizeMaps_f( const idCmdArgs &args ) {
 	}
 
 	common->SetRefreshOnPrint( true );
-	
+
 	ListHash listHash;
 	LoadMapLocalizeData(listHash);
 
@@ -2127,7 +2127,7 @@ void Com_LocalizeMaps_f( const idCmdArgs &args ) {
 		GetFileList("z:/d3xp/d3xp/maps/game", "*.map", files);
 		for ( int i = 0; i < files.Num(); i++ ) {
 			idStr file =  fileSystem->OSPathToRelativePath(files[i]);
-			strCount += LocalizeMap(file, strTable, listHash, excludeList, write);		
+			strCount += LocalizeMap(file, strTable, listHash, excludeList, write);
 		}
 	}
 
@@ -2162,7 +2162,7 @@ void Com_LocalizeGuis_f( const idCmdArgs &args ) {
 	idFileList *files;
 	if ( idStr::Icmp( args.Argv(1), "all" ) == 0 ) {
 		// taaaki: tels, should this reference darkmod or the specific mission?
-        idStr curgame = cvarSystem->GetCVarString( "fs_mod" ); 
+        idStr curgame = cvarSystem->GetCVarString( "fs_mod" );
 		if(curgame.Length()) {
 			files = fileSystem->ListFilesTree( "guis", "*.gui", true, curgame );
 		} else {
@@ -2194,8 +2194,8 @@ void Com_LocalizeGuiParmsTest_f( const idCmdArgs &args ) {
 
 	common->SetRefreshOnPrint( true );
 
-	idFile *localizeFile = fileSystem->OpenFileWrite( "gui_parm_localize.csv" ); 
-	idFile *noLocalizeFile = fileSystem->OpenFileWrite( "gui_parm_nolocalize.csv" ); 
+	idFile *localizeFile = fileSystem->OpenFileWrite( "gui_parm_localize.csv" );
+	idFile *noLocalizeFile = fileSystem->OpenFileWrite( "gui_parm_nolocalize.csv" );
 
 	idStrList excludeList;
 	LoadGuiParmExcludeList(excludeList);
@@ -2204,7 +2204,7 @@ void Com_LocalizeGuiParmsTest_f( const idCmdArgs &args ) {
 	GetFileList("z:/d3xp/d3xp/maps/game", "*.map", files);
 
 	for ( int i = 0; i < files.Num(); i++ ) {
-		
+
 		common->Printf("Testing Map '%s'\n", files[i].c_str());
 		idMapFile map;
 
@@ -2229,7 +2229,7 @@ void Com_LocalizeGuiParmsTest_f( const idCmdArgs &args ) {
 			}
 		}
 	}
-	
+
 	fileSystem->CloseFile( localizeFile );
 	fileSystem->CloseFile( noLocalizeFile );
 
@@ -2245,8 +2245,8 @@ void Com_LocalizeMapsTest_f( const idCmdArgs &args ) {
 
 	common->SetRefreshOnPrint( true );
 
-	idFile *localizeFile = fileSystem->OpenFileWrite( "map_localize.csv" ); 
-	
+	idFile *localizeFile = fileSystem->OpenFileWrite( "map_localize.csv" );
+
 	idStrList files;
 	GetFileList("z:/d3xp/d3xp/maps/game", "*.map", files);
 
@@ -2261,7 +2261,7 @@ void Com_LocalizeMapsTest_f( const idCmdArgs &args ) {
 			for ( int j = 0; j < count; j++ ) {
 				idMapEntity *ent = map.GetEntity( j );
 				if ( ent ) {
-					
+
 					//Temp code to get a list of all entity key value pairs
 					/*idStr classname = ent->epairs.GetString("classname");
 					if(classname == "worldspawn" || classname == "func_static" || classname == "light" || classname == "speaker" || classname.Left(8) == "trigger_") {
@@ -2274,7 +2274,7 @@ void Com_LocalizeMapsTest_f( const idCmdArgs &args ) {
 					}*/
 
 					idStr classname = ent->epairs.GetString("classname");
-					
+
 					//Hack: for info_location
 					bool hasLocation = false;
 
@@ -2284,7 +2284,7 @@ void Com_LocalizeMapsTest_f( const idCmdArgs &args ) {
 						for ( int k = 0; k < list->Num(); k++ ) {
 
 							idStr val = ent->epairs.GetString((*list)[k], "");
-							
+
 							if ( classname == "info_location" && (*list)[k] == "location" ) {
 								hasLocation = true;
 							}
@@ -2463,7 +2463,7 @@ void idCommonLocal::Frame( void ) {
 		Sys_GenerateEvents();
 
 		// write config file if anything changed
-		WriteConfiguration(); 
+		WriteConfiguration();
 
 		// stgatilov #4550: update FPU props (e.g. NaN exceptions)
 		sys->ThreadHeartbeat( "Main Thread" );
@@ -2537,7 +2537,7 @@ void idCommonLocal::Frame( void ) {
 			Printf("frame:%i all:%3i gfr:%3i fr:%3i(%d) br:%3i(%d)\n", com_frameNumber, com_frameDelta, time_gameFrame, time_frontend, time_frontendLast, time_backend, time_backendLast);
 			time_gameFrame = 0;
 			time_gameDraw = 0;
-		}	
+		}
 
 		com_frameNumber++;
 
@@ -2561,7 +2561,7 @@ void idCommonLocal::GUIFrame( bool execCmd, bool network ) {
 	com_frameTime = com_ticNumber * USERCMD_MSEC;
 
 	session->Frame();
-	session->UpdateScreen( false );	
+	session->UpdateScreen( false );
 }
 
 /*
@@ -2634,7 +2634,7 @@ idCommonLocal::Async
 =================
 */
 void idCommonLocal::Async( void ) {
-	
+
 	if ( com_shuttingDown ) {
 		return;
 	}
@@ -2651,7 +2651,7 @@ void idCommonLocal::Async( void ) {
 	// stgatilov #4514: game tics happen even X microseconds (in cumulative sense)
 	// to see how often this function is called, see Sys_StartAsyncThread
 	//static const int USERCMD_USEC = 16650;		// ~60.06 Hz --- a bit higher than vsync
-	
+
 	// stgatilov #5575: reverted back to Doom 3 time to ensure game & gui time is synchronized with sound time
 	// this produces a visible double-frame every 0.4 second =(
 	static const int USERCMD_USEC = 16000;			// 62.5 Hz --- a bit higher than vsync
@@ -2810,7 +2810,7 @@ void idCommonLocal::Init( int argc, const char **argv, const char *cmdline )
 
 		// clear warning buffer
 		ClearWarnings( GAME_NAME " initialization" );
-		
+
 		// parse command line options
 		idCmdArgs args;
 		if ( cmdline ) {
@@ -2885,7 +2885,7 @@ void idCommonLocal::Init( int argc, const char **argv, const char *cmdline )
 
 		// remove any prints from the notify lines
 		console->ClearNotifyLines();
-		
+
 		// greebo: Keep the console lines around, we need it when reloading the engine
 		//ClearCommandLine();
 
@@ -2998,7 +2998,7 @@ void idCommonLocal::InitGame( void )
 		// Darkmod.cfg and DarkmodKeybinds.cfg will be written upon exit
 		if (fileSystem->FindFile(CONFIG_FILE) != FIND_NO) {
 			cmdSystem->BufferCommandText(CMD_EXEC_APPEND, "exec " CONFIG_FILE "\n");		// Darkmod.cfg
-			
+
 		}
 		if (fileSystem->FindFile(KEYBINDS_FILE) != FIND_NO) { // STiFU #4797
 			cmdSystem->BufferCommandText(CMD_EXEC_APPEND, "exec " KEYBINDS_FILE "\n");		// DarkmodKeybinds.cfg
@@ -3007,7 +3007,7 @@ void idCommonLocal::InitGame( void )
 			cmdSystem->BufferCommandText(CMD_EXEC_APPEND, "exec " PADBINDS_FILE "\n");
 		}
 
-		cmdSystem->BufferCommandText( CMD_EXEC_APPEND, "exec autoexec.cfg\n" );
+		cmdSystem->BufferCommandText( CMD_EXEC_APPEND, "exec autoexec_vr.cfg\n" );
 	}
 
 	// reload the language dictionary now that we've loaded config files
@@ -3053,7 +3053,7 @@ void idCommonLocal::InitGame( void )
 	// startup the script debugger
 	if ( com_enableDebuggerServer.GetBool( ) )
 		DebuggerServerInit();
-	
+
 	// init the session
 	session->Init();
 

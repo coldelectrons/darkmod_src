@@ -21,7 +21,7 @@
 #include "renderer/backend/FrameBufferManager.h"
 #include "renderer/resources/Image.h"
 
-void OpenXRSwapchainGL::Init( const idStr &name, int64_t format, int width, int height ) {
+void OpenXRSwapchainGL::Init( const idStr &name, int64_t format, uint32_t width, uint32_t height ) {
 	if ( swapchain != nullptr ) {
 		Destroy();
 	}

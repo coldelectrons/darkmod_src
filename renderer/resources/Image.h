@@ -166,7 +166,7 @@ typedef struct imageBlock_s {
 
 // stgatilov: cubeMapAxes[f] --- coordinate system of f-th face of cubemap
 // [2]-th axis is major axis, [0] and [1] are directions of U and V texcoords growth
-// perfectly matches OpenGL specs (CF_NATIVE layout) 
+// perfectly matches OpenGL specs (CF_NATIVE layout)
 extern const idVec3 cubeMapAxes[6][3];
 
 
@@ -493,6 +493,9 @@ public:
 	idImageAsset *		noFalloffImage;				// all 255, but zero clamped
 	idImageAsset *		fogImage;					// increasing alpha is denser fog
 	idImageAsset *		fogEnterImage;				// adjust fogImage alpha based on terminator plane
+	idImageAsset *		quadraticImage;
+	idImageAsset *		ambientWorldDiffuseImage;
+	idImageAsset *		ambientWorldSpecularCubeMapImage;
 	idImageAsset *		blueNoise1024rgbaImage;		// blue noise precomputed image for dithering
 	// built-in stream-written textures
 	idImageScratch *	cinematicImage;

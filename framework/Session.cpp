@@ -26,7 +26,7 @@ Project: The Dark Mod (http://www.thedarkmod.com/)
 idCVar	idSessionLocal::com_showAngles( "com_showAngles", "0", CVAR_SYSTEM | CVAR_BOOL, "" );
 idCVar	idSessionLocal::com_minTics( "com_minTics", "0", CVAR_SYSTEM, "" );
 idCVar	idSessionLocal::com_showTics( "com_showTics", "0", CVAR_SYSTEM | CVAR_BOOL, "" );
-idCVar	idSessionLocal::com_fixedTic("com_fixedTic", "1", CVAR_SYSTEM | CVAR_ARCHIVE | CVAR_INTEGER,
+idCVar	idSessionLocal::com_fixedTic("com_fixedTic", "0", CVAR_SYSTEM | CVAR_ARCHIVE | CVAR_INTEGER,
 	" 0 -- game tics have fixed duration of 16 ms (stable physics but 60 FPS limit)\n"
 	" 1 -- game tics can have shorter duration (removes 60 FPS limit)",
 0, 1);
@@ -54,7 +54,7 @@ idCVar	idSessionLocal::com_wipeSeconds( "com_wipeSeconds", "0.1", CVAR_SYSTEM, "
 idCVar	idSessionLocal::com_guid( "com_guid", "", CVAR_SYSTEM | CVAR_ARCHIVE | CVAR_ROM, "" );
 
 // SteveL #4161: Support > 1 quicksave
-idCVar	idSessionLocal::com_numQuickSaves( "com_numQuickSaves", "2", CVAR_GAME | CVAR_NOCHEAT | CVAR_INTEGER | CVAR_ARCHIVE, 
+idCVar	idSessionLocal::com_numQuickSaves( "com_numQuickSaves", "2", CVAR_GAME | CVAR_NOCHEAT | CVAR_INTEGER | CVAR_ARCHIVE,
 	"How many quicksaves to retain. Reducing the number won't delete any that you already have.", 1.0f, 100000.0f );
 
 // stgatilov: allow choosing format for savegame previews
@@ -144,7 +144,7 @@ Restart the server on a different map in developer mode
 static void Session_DevMap_f( const idCmdArgs &args ) {
 	idStr map, string;
 	findFile_t	ff;
-	idCmdArgs	rl_args;	
+	idCmdArgs	rl_args;
 
 	map = args.Argv(1);
 	if ( !map.Length() ) {
@@ -245,7 +245,7 @@ static void Sess_WritePrecache_f( const idCmdArgs &args ) {
 ===============================================================================
 
 SESSION LOCAL
-  
+
 ===============================================================================
 */
 
@@ -255,7 +255,7 @@ idSessionLocal::Clear
 ===============
 */
 void idSessionLocal::Clear() {
-	
+
 	insideUpdateScreen = false;
 	insideExecuteMapChange = false;
 
@@ -286,7 +286,7 @@ void idSessionLocal::Clear() {
 	lastUpdateProgressBarTime = 0;
 	lastUpdateProgressBarStage = PROGRESS_STAGE_COUNT;	// different from any valid
 	lastUpdateProgressBarRatio = 0.0f;
-	
+
 	msgRunning = false;
 	guiMsgRestore = NULL;
 	msgIgnoreButtons = false;
@@ -311,10 +311,10 @@ idSessionLocal::idSessionLocal
 ===============
 */
 idSessionLocal::idSessionLocal() {
-	guiInGame = guiMainMenu = guiLoading = guiActive = guiTest = guiMsg = guiMsgRestore = NULL;	
+	guiInGame = guiMainMenu = guiLoading = guiActive = guiTest = guiMsg = guiMsgRestore = NULL;
 
 	menuSoundWorld = NULL;
-	
+
 	Clear();
 }
 
@@ -405,7 +405,7 @@ void idSessionLocal::Shutdown() {
 		delete menuSoundWorld;
 		menuSoundWorld = NULL;
 	}
-		
+
 	mapSpawnData.serverInfo.ClearFree();
 	mapSpawnData.syncedCVars.ClearFree();
 	for ( i = 0; i < MAX_ASYNC_CLIENTS; i++ ) {
@@ -824,7 +824,7 @@ void idSessionLocal::StopPlayingRenderDemo() {
 		return;
 	}
 
-	// Record the stop time before doing anything that could be time consuming 
+	// Record the stop time before doing anything that could be time consuming
 	int timeDemoStopTime = Sys_Milliseconds();
 
 	EndAVICapture();
@@ -885,7 +885,7 @@ void idSessionLocal::StartPlayingRenderDemo( idStr demoName ) {
 
 	// make sure localSound / GUI intro music shuts up
 	sw->StopAllSounds();
-	sw->PlayShaderDirectly( "", 0 );	
+	sw->PlayShaderDirectly( "", 0 );
 	menuSoundWorld->StopAllSounds();
 	menuSoundWorld->PlayShaderDirectly( "", 0 );
 
@@ -936,12 +936,12 @@ idSessionLocal::TimeRenderDemo
 */
 void idSessionLocal::TimeRenderDemo( const char *demoName, bool twice ) {
 	idStr demo = demoName;
-	
+
 	// no sound in time demos
 	soundSystem->SetMute( true );
 
 	StartPlayingRenderDemo( demo );
-	
+
 	if ( twice && readDemo ) {
 		// cycle through once to precache everything
 		guiLoading->SetStateString( "demo", common->Translate( "#str_04852" ) );
@@ -955,7 +955,7 @@ void idSessionLocal::TimeRenderDemo( const char *demoName, bool twice ) {
 		guiLoading->SetStateString( "demo", "" );
 		StartPlayingRenderDemo( demo );
 	}
-	
+
 
 	if ( !readDemo ) {
 		return;
@@ -992,7 +992,7 @@ void idSessionLocal::EndAVICapture() {
 	sw->AVIClose();
 
 	// write a .roqParam file so the demo can be converted to a roq file
-	idFile *f = fileSystem->OpenFileWrite( va( "demos/%s/%s.roqParam", 
+	idFile *f = fileSystem->OpenFileWrite( va( "demos/%s/%s.roqParam",
 		aviDemoShortName.c_str(), aviDemoShortName.c_str() ) );
 	f->Printf( "INPUT_DIR demos/%s\n", aviDemoShortName.c_str() );
 	f->Printf( "FILENAME demos/%s/%s.RoQ\n", aviDemoShortName.c_str(), aviDemoShortName.c_str() );
@@ -1223,7 +1223,7 @@ This should still work after disconnecting from a level
 ==============
 */
 void idSessionLocal::WriteCmdDemo( const char *demoName, bool save ) {
-	
+
 	if ( !demoName[0] ) {
 		common->Printf( "idSessionLocal::WriteCmdDemo: no name specified\n" );
 		return;
@@ -1250,7 +1250,7 @@ void idSessionLocal::WriteCmdDemo( const char *demoName, bool save ) {
 	if ( save ) {
 		cmdDemoFile->Write( &logIndex, sizeof( logIndex ) );
 	}
-	
+
 	SaveCmdDemoToFile( cmdDemoFile );
 
 	if ( save ) {
@@ -1525,8 +1525,8 @@ bool idSessionLocal::ExecuteMapChange(idFile* savegameFile, bool noFadeWipe ) {
 
 	{
 		numClients = 1;
-	} 
-	
+	}
+
 	int start = Sys_Milliseconds();
 
 	common->Printf( "--------- Map Initialization ---------\n" );
@@ -1553,9 +1553,9 @@ bool idSessionLocal::ExecuteMapChange(idFile* savegameFile, bool noFadeWipe ) {
 	// load and spawn all other entities ( from a savegame possibly )
 	if ( savegameFile ) {
 		if ( game->InitFromSaveGame( fullMapName + ".map", rw, sw, savegameFile ) == false ) {
-			
+
 			// Loadgame failed
-			// STiFU #4531: We used to do an initialized load of the map at this point. 
+			// STiFU #4531: We used to do an initialized load of the map at this point.
 			// This is now controlled from the outside, however.
 			return false;
 		}
@@ -1704,13 +1704,13 @@ const idStr GetMostRecentQuicksaveFilename()
 	// Get the list of existing save games
 	idStrList fileList;
 	idList<fileTIME_T> fileTimes;
-	sessLocal.GetSaveGameList( fileList, fileTimes ); 
+	sessLocal.GetSaveGameList( fileList, fileTimes );
 
 	// fileTimes is sorted, most recent first. Find the first quick save
 	idStr filename;
 	idStr quicksaveName = common->Translate( "#str_07178" );
 	quicksaveName.Replace( " ", "_" ); // grayman #4398
-	
+
 	int idx = 0;
 	for ( ; idx < fileList.Num(); idx++ )
 	{
@@ -1948,7 +1948,7 @@ bool idSessionLocal::SaveGame( const char *saveName, bool autosave, bool skipChe
 	}
 
 	// setup up paths
-	
+
 	ScrubSaveGameFileName( gameFile );
 
 	gameFile = "savegames/" + gameFile;
@@ -1976,7 +1976,7 @@ bool idSessionLocal::SaveGame( const char *saveName, bool autosave, bool skipChe
 		return false;
 	}
 
-	// Write SaveGame Header: 
+	// Write SaveGame Header:
 	// Game Name / Version / Map Name / Persistent Player Info
 
 	// game
@@ -2106,7 +2106,7 @@ bool idSessionLocal::LoadGame(const char *saveName, eSaveConflictHandling confli
 		{
 			// Version conflict. Ask what to do.
 
-			// If not yet active, open the main menu		
+			// If not yet active, open the main menu
 			if (!guiActive)
 			{
 				console->Close();
@@ -2165,7 +2165,7 @@ bool idSessionLocal::LoadGame(const char *saveName, eSaveConflictHandling confli
 
 	if (error)
 	{
-		// If not yet active, open the main menu		
+		// If not yet active, open the main menu
 		if (!guiActive)
 		{
 			console->Close();
@@ -2372,7 +2372,7 @@ bool idSessionLocal::ProcessEvent( const sysEvent_t *event ) {
 			guiTest = NULL;
 			return true;
 		}
-		
+
 		static const char *cmd;
 		cmd = guiTest->HandleEvent( event, com_frameTime );
 		if ( cmd && cmd[0] ) {
@@ -2446,7 +2446,7 @@ void idSessionLocal::AdvanceRenderDemo( bool singleFrameOnly ) {
 		lastDemoTic = latchedTicNumber - latchedTicNumber % USERCMD_PER_DEMO_FRAME;
 	} else {
 		// always advance a single frame with avidemo and timedemo
-		lastDemoTic = latchedTicNumber; 
+		lastDemoTic = latchedTicNumber;
 	}
 
 	while( skipFrames > -1 ) {
@@ -2611,7 +2611,7 @@ void idSessionLocal::Draw() {
 		}
 		if ( guiActive == guiMsg ) {
 			guiMsg->Redraw( com_frameTime );
-		} 
+		}
 	} else if ( guiTest ) {
 		// if testing a gui, clear the screen and draw it
 		// clear the background, in case the tested gui is transparent
@@ -2683,7 +2683,7 @@ void idSessionLocal::Draw() {
 
 	// draw the wipe material on top of this if it hasn't completed yet
 	DrawWipeModel();
-	
+
 	// draw debug graphs
 	DrawCmdGraph();
 
@@ -2724,7 +2724,7 @@ void idSessionLocal::UpdateScreen( bool outOfSequence ) {
 	if ( outOfSequence ) {
 		Sys_GrabMouseCursor( false );
 	}
-	
+
 	renderSystem->BeginFrame( renderSystem->GetScreenWidth(), renderSystem->GetScreenHeight() );
 
 	if (com_speeds.GetBool()) {
@@ -2761,7 +2761,7 @@ void idSessionLocal::Frame() {
 	} else {
 		Sys_GrabMouseCursor( true );
 	}
-	
+
 	//nbohr1more: disable SMP for debug render tools
 	if (
 		r_showSurfaceInfo.GetBool() ||
@@ -2833,8 +2833,8 @@ void idSessionLocal::Frame() {
 		minTic = lastGameTic + USERCMD_PER_DEMO_FRAME;		// demos are recorded at 30 hz
 	}
 
-	// Spin in place if needed when frame cap is active. 
-	// The game should yield the cpu if it is running over 60 hz, 
+	// Spin in place if needed when frame cap is active.
+	// The game should yield the cpu if it is running over 60 hz,
 	// because there is fundamentally nothing useful for it to do.
 	while (true) {
 		latchedTicNumber = com_ticNumber;
@@ -2856,7 +2856,7 @@ void idSessionLocal::Frame() {
 	//------------ single player game tics --------------
 
 	gameTicsToRun = 0;
-	
+
 	if ( !mapSpawned || guiActive ) {
 		if ( !com_asyncInput.GetBool() ) {
 			// early exit, won't do RunGameTic .. but still need to update mouse position for GUIs
@@ -2977,7 +2977,7 @@ void idSessionLocal::RunGameTic(int timestepMs, bool minorTic) {
 			logCmd.consistencyHash = LittleInt( logCmd.consistencyHash );
 		}
 	}
-	
+
 	// if we didn't get one from the file, get it locally
 	if ( !cmdDemoFile ) {
 		// get a locally created command
@@ -3036,7 +3036,7 @@ void idSessionLocal::RunGameTics() {
 	// run game tics
 	for (int i = 0; i < gameTicsToRun; ++i) {
 		int deltaMs = gameTimestepTotal * (i+1) / gameTicsToRun - gameTimestepTotal * i / gameTicsToRun;
-		if (com_fixedTic.GetInteger() == 0) 
+		if (com_fixedTic.GetInteger() == 0)
 			assert(deltaMs == USERCMD_MSEC);
 
 		// stgatilov #5992: optimize all tics except for the first one
@@ -3107,8 +3107,8 @@ void idSessionLocal::FrontendThreadFunction() {
 			DrawFrame();
 		} catch( std::shared_ptr< ErrorReportedException > e ) {
 			frontendException = e;
-		} 
-		
+		}
+
 		{ // lock scope - signal render thread
 			std::unique_lock< std::mutex > lock( signalMutex );
 			frontendActiveNow = false;
@@ -3118,7 +3118,7 @@ void idSessionLocal::FrontendThreadFunction() {
 }
 
 bool idSessionLocal::IsFrontend() const {
-#if 0	
+#if 0
 	return std::this_thread::get_id() == frontendThread.get_id();
 #else
 #if WIN32
@@ -3186,7 +3186,7 @@ void idSessionLocal::StartFrontendThread() {
 	auto func = []( void *x ) -> unsigned int {
 		idSessionLocal* s = (idSessionLocal*)x;
 		s->FrontendThreadFunction();
-		return 0; 
+		return 0;
 	};
 	frontendThread = Sys_CreateThread( (xthread_t)func, this, THREAD_NORMAL, "Frontend" );
 }
@@ -3194,7 +3194,7 @@ void idSessionLocal::StartFrontendThread() {
 
 void idSessionLocal::ExecuteFrameCommand(const char *command, bool delayed) {
 	TRACE_CPU_SCOPE_FORMAT( "ExecuteFrameCommand", "%s %d", command, int(delayed) );
-	
+
 	if (delayed) {
 		delayedFrameCommands.Append(command);
 		return;
@@ -3293,7 +3293,7 @@ void idSessionLocal::Init() {
 
 	cmdSystem->AddCommand( "saveGame", SaveGame_f, CMD_FL_SYSTEM|CMD_FL_CHEAT, "saves a game" );
 	cmdSystem->AddCommand( "loadGame", LoadGame_f, CMD_FL_SYSTEM|CMD_FL_CHEAT, "loads a game", idCmdSystem::ArgCompletion_SaveGame );
-	
+
 	cmdSystem->AddCommand( "rescanSI", Session_RescanSI_f, CMD_FL_SYSTEM, "internal - rescan serverinfo cvars and tell game" );
 
 	cmdSystem->AddCommand( "hitch", Session_Hitch_f, CMD_FL_SYSTEM|CMD_FL_CHEAT, "hitches the game" );
@@ -3328,7 +3328,7 @@ void idSessionLocal::Init() {
 	guiHandle = NULL;
 
 	StartFrontendThread();
-	
+
 	common->Printf( "session initialized\n" );
 	common->Printf( "--------------------------------------\n" );
 }

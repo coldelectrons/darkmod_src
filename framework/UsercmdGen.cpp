@@ -18,7 +18,8 @@ Project: The Dark Mod (http://www.thedarkmod.com/)
 
 
 #include "GamepadInput.h"
-#include "Session_local.h"
+#include "framework/Session_local.h"
+#include "renderer/vr/OpenXRBackend.h"
 #include "../sys/sys_padinput.h"
 
 /*
@@ -38,7 +39,7 @@ void usercmd_t::ByteSwap( void ) {
 usercmd_t::operator==
 ================
 */
-bool usercmd_t::operator==( const usercmd_t &rhs ) const { 
+bool usercmd_t::operator==( const usercmd_t &rhs ) const {
 	return ( buttons == rhs.buttons &&
 			forwardmove == rhs.forwardmove &&
 			rightmove == rhs.rightmove &&
@@ -341,7 +342,7 @@ const int MAX_CHAT_BUFFER = 127;
 class idUsercmdGenLocal : public idUsercmdGen {
 public:
 					idUsercmdGenLocal( void );
-	
+
 	virtual void	Init( void ) override;
 
 	virtual void	InitForNewMap( void ) override;
@@ -417,6 +418,9 @@ private:
 
 	int				mouseDx, mouseDy;	// added to by mouse events
 	int				joystickAxis[MAX_JOYSTICK_AXIS];	// set by joystick events
+
+	poseInput_t		poseInput;
+	int				lastTurnDeflection;
 
 	static idCVar	in_yawSpeed;
 	static idCVar	in_pitchSpeed;
@@ -583,7 +587,7 @@ Moves the local angle positions
 */
 void idUsercmdGenLocal::AdjustAngles( void ) {
 	float	speed;
-	
+
 	if ( toggled_run.on ) {
 		speed = idMath::M_MS2SEC * USERCMD_MSEC * in_angleSpeedKey.GetFloat();
 	} else {
@@ -644,7 +648,7 @@ void idUsercmdGenLocal::MouseMove( void ) {
 
 	history[historyCounter&7][0] = mouseDx;
 	history[historyCounter&7][1] = mouseDy;
-	
+
 	// allow mouse movement to be smoothed together
 	int smooth = m_smooth.GetInteger();
 	if ( smooth < 1 ) {
@@ -743,7 +747,15 @@ void idUsercmdGenLocal::JoystickMove( void ) {
 
 	float yawAngleSpeed = anglespeed * ( in_padInvertYawAxis.GetBool() ? 1 : -1 );
 	float pitchAngleSpeed = anglespeed * ( in_padInvertPitchAxis.GetBool() ? 1 : -1 );
-	viewangles[YAW] += yawAngleSpeed * in_yawSpeed.GetFloat() * joystickAxis[AXIS_YAW] / 127.f;
+	if ( vr_useMotionControllers.GetBool() && vr_inputSnapTurnInterval.GetInteger() > 0 ) {
+		int turnDeflection = joystickAxis[AXIS_YAW] >= 100 ? 1 : joystickAxis[AXIS_YAW] <= -100 ? -1 : 0;
+		if ( turnDeflection != lastTurnDeflection ) {
+			viewangles[YAW] += ( in_padInvertYawAxis.GetBool() ? 1 : -1 ) * turnDeflection * vr_inputSnapTurnInterval.GetInteger();
+			lastTurnDeflection = turnDeflection;
+		}
+	} else {
+		viewangles[YAW] += yawAngleSpeed * in_yawSpeed.GetFloat() * joystickAxis[AXIS_YAW] / 127.f;
+	}
 	viewangles[PITCH] += pitchAngleSpeed * in_pitchSpeed.GetFloat() * joystickAxis[AXIS_PITCH] / 127.f;
 	cmd.rightmove = idMath::ClampChar( cmd.rightmove + joystickAxis[AXIS_SIDE] );
 	cmd.forwardmove = idMath::ClampChar( cmd.forwardmove + joystickAxis[AXIS_FORWARD] );
@@ -820,7 +832,7 @@ void idUsercmdGenLocal::MakeCurrent( void ) {
 	int		i;
 
 	oldAngles = viewangles;
-	
+
 	if ( !Inhibited() ) {
 		// update toggled key states
 		toggled_crouch.SetKeyState( ButtonState( UB_DOWN ), in_toggleCrouch.GetBool() );
@@ -842,12 +854,16 @@ void idUsercmdGenLocal::MakeCurrent( void ) {
 		// get basic movement from joystick
 		JoystickMove();
 
+		cmd.movementAxis = poseInput.movementAxis;
+		cmd.frobAxis = poseInput.frobHandAxis;
+		cmd.frobPos = poseInput.frobHandPos;
+
 		// check to make sure the angles haven't wrapped
 		if ( viewangles[PITCH] - oldAngles[PITCH] > 90 ) {
 			viewangles[PITCH] = oldAngles[PITCH] + 90;
 		} else if ( oldAngles[PITCH] - viewangles[PITCH] > 90 ) {
 			viewangles[PITCH] = oldAngles[PITCH] - 90;
-		} 
+		}
 	} else {
 		mouseDx = 0;
 		mouseDy = 0;
@@ -929,7 +945,7 @@ idUsercmdGenLocal::Clear
 ================
 */
 void idUsercmdGenLocal::Clear( void ) {
-	// clears all key states 
+	// clears all key states
 	memset( buttonState, 0, sizeof( buttonState ) );
 	memset( keyState, false, sizeof( keyState ) );
 
@@ -938,6 +954,8 @@ void idUsercmdGenLocal::Clear( void ) {
 	mouseDx = mouseDy = 0;
 	mouseButton = 0;
 	mouseDown = false;
+
+	lastTurnDeflection = 0;
 }
 
 /*
@@ -1107,7 +1125,7 @@ void idUsercmdGenLocal::Joystick( void ) {
 				if ( type == SE_PAD_BUTTON ) {
 					idGamepadInput::SetButtonState( id, value );
 				} else if ( type == SE_PAD_AXIS ) {
-					idGamepadInput::SetAxisState( id, value );					
+					idGamepadInput::SetAxisState( id, value );
 				}
 			}
 		}
@@ -1115,6 +1133,10 @@ void idUsercmdGenLocal::Joystick( void ) {
 
 	idGamepadInput::UpdateAxisState( joystickAxis );
 	idList<padActionChange_t> stateChanges = idGamepadInput::GetActionStateChange();
+	poseInput.movementAxis = idQuat( 0, 0, 0, 1 );
+	poseInput.frobHandAxis = idQuat( 0, 0, 0, 1 );
+	poseInput.frobHandPos = idVec3( 0, 0, 0 );
+	vrBackend->UpdateInput( joystickAxis, stateChanges, poseInput );
 	for ( auto change : stateChanges ) {
 		if ( change.active ) {
 
@@ -1139,7 +1161,7 @@ void idUsercmdGenLocal::Joystick( void ) {
 			}
 		}
 	}
-	
+
 	Sys_EndGamepadInputEvents();
 }
 

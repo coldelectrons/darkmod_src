@@ -17,6 +17,8 @@ Project: The Dark Mod (http://www.thedarkmod.com/)
 #include "local.h"
 
 #include <GLFW/glfw3.h>
+GLXFBConfig bestFbc = 0;
+XVisualInfo *visinfo = NULL;
 
 #include "icons/darkmod_icon32.h"
 #include "icons/darkmod_icon64.h"
@@ -83,7 +85,7 @@ void GLimp_Shutdown() {
 	if ( window ) {
 		common->Printf( "...shutting down QGL\n" );
 		GLimp_UnloadFunctions();
-		
+
 		glfwDestroyWindow( window );
 		glfwTerminate();
 
@@ -211,11 +213,11 @@ int GLX_Init(glimpParms_t a) {
 	glfwMakeContextCurrent(window);
 
 	glConfig.isFullscreen = a.fullScreen;
-	
+
 	if ( glConfig.isFullscreen ) {
 		Sys_GrabMouseCursor( true );
 	}
-	
+
 	return true;
 }
 
@@ -243,7 +245,7 @@ bool GLimp_Init( glimpParms_t a ) {
 	common->Printf( "...initializing QGL\n" );
 	//load all function pointers available in the final context
 	GLimp_LoadFunctions();
-	
+
 	return true;
 }
 

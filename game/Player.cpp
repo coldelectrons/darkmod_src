@@ -34,7 +34,8 @@ Project: The Dark Mod (http://www.thedarkmod.com/)
 #include "Shop/Shop.h"
 #include <numeric>
 
-#include "../sys/sys_padinput.h"
+#include "sys/sys_padinput.h"
+#include "renderer/vr/OpenXRBackend.h"
 
 /*
 ===============================================================================
@@ -73,8 +74,8 @@ const float SHOULDER_JUMP_HINDERANCE = 0.25f;
 // grayman #3485 - additional volume reduction when falling when crouched
 const float FALL_CROUCH_VOL_ADJUST = -7.0f;
 
-// SteveL #3716 - play a footstep sound at full volume despite player being crouched if the player actively 
-// jumped less than JUMP_DETECTION_TIME milliseconds ago. Fix for bunny hopping #3716. Needs to be set high 
+// SteveL #3716 - play a footstep sound at full volume despite player being crouched if the player actively
+// jumped less than JUMP_DETECTION_TIME milliseconds ago. Fix for bunny hopping #3716. Needs to be set high
 // enough that jumps lasting longer than this will always produce a sound anyway due to z-velocity.
 const int JUMP_DETECTION_TIME = 1000;
 
@@ -85,12 +86,12 @@ const idEventDef EV_Player_GetMove( "getMove", EventArgs(), 'v',
 	"vector_x = forward, vector_y = right, vector_z = up");
 
 const idEventDef EV_Player_GetViewAngles( "getViewAngles", EventArgs(), 'v', "Returns the player view angles.");
-const idEventDef EV_Player_SetViewAngles( "setViewAngles", EventArgs('v',"angles",""), EV_RETURNS_VOID, 
+const idEventDef EV_Player_SetViewAngles( "setViewAngles", EventArgs('v',"angles",""), EV_RETURNS_VOID,
 	"Sets the player view angles, e.g. make the player facing this direction.\n" \
 	"0 0 0 is east (along the X axis in DR), 0 90 0 north (along the Y axis in DR)\n" \
 	"0 180 0 west, 0 270 0 south.");
 
-const idEventDef EV_Player_GetMouseGesture( "getMouseGesture", EventArgs(), 'd', 
+const idEventDef EV_Player_GetMouseGesture( "getMouseGesture", EventArgs(), 'd',
 	"Returns the results of the last mouse gesture in enum form.\n" \
 	"(see the definition for MOUSEDIR_* for which numbers correspond to which directions)");
 
@@ -98,10 +99,10 @@ const idEventDef EV_Player_MouseGestureFinished( "mouseGestureFinished", EventAr
 
 const idEventDef EV_Player_ClearMouseDeadTime("clearMouseDeadTime",EventArgs(), EV_RETURNS_VOID, "");
 
-const idEventDef EV_Player_StartMouseGesture( "startMouseGesture", 
-		EventArgs(	'd', "key", "", 
-					'd', "thresh", "Waits until the threshold mouse input thresh is reached before deciding.", 
-					'd', "test", "determines which test to do (0 = up/down, 1 = left/right, 2 = 4 directions, 3 = 8 directions).", 
+const idEventDef EV_Player_StartMouseGesture( "startMouseGesture",
+		EventArgs(	'd', "key", "",
+					'd', "thresh", "Waits until the threshold mouse input thresh is reached before deciding.",
+					'd', "test", "determines which test to do (0 = up/down, 1 = left/right, 2 = 4 directions, 3 = 8 directions).",
 					'd', "inverted", "inverts the movement if set to 1, does not if 0",
 					'f', "turnHinderance", "Sets the max player view turn rate when checking this mouse gesture (0 => player view locked, 1.0 => no effect on view turning)",
 					'd', "decideTime", "time in milliseconds after which the mouse gesture is auto-decided, in the event that the mouse movement threshold was not reached.\n" \
@@ -112,7 +113,7 @@ const idEventDef EV_Player_StartMouseGesture( "startMouseGesture",
 		"Discretizes analog mouse movement into a few different gesture possibilities.\n" \
 		"Impulse arg can also be a button, see the UB_* enum in usercmdgen.h.\n" \
 		"For now, only one mouse gesture check at a time.");
-	
+
 const idEventDef EV_Player_StopMouseGesture( "stopMouseGesture", EventArgs(), EV_RETURNS_VOID, "");
 
 const idEventDef EV_Player_StopFxFov( "stopFxFov", EventArgs(), EV_RETURNS_VOID, "");
@@ -129,11 +130,11 @@ const idEventDef EV_Player_GetIdealWeapon( "getIdealWeapon",EventArgs(), 's', ""
 
 const idEventDef EV_Player_GetEyePos( "getEyePos", EventArgs(), 'v', "Get eye position of the player and the AI.");
 
-const idEventDef EV_Player_SetImmobilization( "setImmobilization", EventArgs('s', "source", "", 'd', "type", ""), EV_RETURNS_VOID, 
+const idEventDef EV_Player_SetImmobilization( "setImmobilization", EventArgs('s', "source", "", 'd', "type", ""), EV_RETURNS_VOID,
 		"Used to set immobilization from a source.\n" \
 		"Warning: Not a finalized version. It's subject to change, so use it at your own risk.)");
 
-const idEventDef EV_Player_GetImmobilization( "getImmobilization", EventArgs('s', "source", ""), 'd', 
+const idEventDef EV_Player_GetImmobilization( "getImmobilization", EventArgs('s', "source", ""), 'd',
 		"Used to get immobilization from a source.\n"\
 		"Warning: Not a finalized version. It's subject to change, so use it at your own risk.)");
 
@@ -142,9 +143,9 @@ const idEventDef EV_Player_GetNextImmobilization( "getNextImmobilization", Event
 		"Warning: Not a finalized version. It's subject to change, so use it at your own risk.)");
 
 
-const idEventDef EV_Player_SetHinderance( "setHinderance", 
-		EventArgs(	's', "source", "", 
-					'f', "mCap", "mCap values from all sources are multiplied together to define a cap", 
+const idEventDef EV_Player_SetHinderance( "setHinderance",
+		EventArgs(	's', "source", "",
+					'f', "mCap", "mCap values from all sources are multiplied together to define a cap",
 					'f', "fCap", "fCap values are not additive, the smallest one among all the sources is used"),
 		EV_RETURNS_VOID, "Used to set hinderance from a source." );
 
@@ -152,14 +153,14 @@ const idEventDef EV_Player_GetHinderance( "getHinderance", EventArgs('s', "sourc
 const idEventDef EV_Player_GetNextHinderance( "getNextHinderance", EventArgs('s', "prefix", "", 's', "lastMatch", ""), 's', "Used to get the next hinderance from a source.");
 
 
-const idEventDef EV_Player_SetTurnHinderance( "setTurnHinderance", 
-			EventArgs(	's', "source", "", 
-					'f', "mCap", "mCap values from all sources are multiplied together to define a cap", 
+const idEventDef EV_Player_SetTurnHinderance( "setTurnHinderance",
+			EventArgs(	's', "source", "",
+					'f', "mCap", "mCap values from all sources are multiplied together to define a cap",
 					'f', "fCap", "fCap values are not additive, the smallest one among all the sources is used"),
 			EV_RETURNS_VOID, "Set the hinderance on the view turning from a source");
-	
+
 const idEventDef EV_Player_GetTurnHinderance( "getTurnHinderance", EventArgs('s', "source", ""), 'v', "* Get the hinderance on the view turning from a source");
-const idEventDef EV_Player_GetNextTurnHinderance( "getNextTurnHinderance", EventArgs('s', "prefix", "", 's', "lastMatch", ""), 
+const idEventDef EV_Player_GetNextTurnHinderance( "getNextTurnHinderance", EventArgs('s', "prefix", "", 's', "lastMatch", ""),
 												  's', "Get the next hinderance on the view turning from a source");
 
 
@@ -173,40 +174,40 @@ const idEventDef EV_Player_CustomDeath("customDeath", EventArgs(), EV_RETURNS_VO
 const idEventDef EV_Player_DeathMenu("deathMenu", EventArgs(), EV_RETURNS_VOID, "");
 
 
-const idEventDef EV_Player_HoldEntity( "holdEntity", EventArgs('E', "entity", ""), 'f', 
+const idEventDef EV_Player_HoldEntity( "holdEntity", EventArgs('E', "entity", ""), 'f',
 		"Forces the player to hold an entity (e.g. puts it into the grabber).\n" \
 		"Drops whatever is in the player's hands if $null_entity is passed to it.\n" \
 		"Returns 1 if successful, 0 if not.");
 
 const idEventDef EV_Player_HeldEntity( "heldEntity", EventArgs(), 'E', "Returns the entity currently being held, or $null_entity if the player's hands are empty.");
 
-const idEventDef EV_Player_RopeRemovalCleanup( "ropeRemovalCleanup", EventArgs('e', "ropeEnt", ""), EV_RETURNS_VOID, 
+const idEventDef EV_Player_RopeRemovalCleanup( "ropeRemovalCleanup", EventArgs('e', "ropeEnt", ""), EV_RETURNS_VOID,
 		"Called when rope arrow ropes are removed, removes stale pointers on the player object.");
 
 
 // NOTE: The following all take the "user" objective indices, starting at 1 instead of 0
-const idEventDef EV_Player_SetObjectiveState( "setObjectiveState", EventArgs('d', "ObjNum", "Starts counting at 1", 'd', "State", ""), EV_RETURNS_VOID, 
+const idEventDef EV_Player_SetObjectiveState( "setObjectiveState", EventArgs('d', "ObjNum", "Starts counting at 1", 'd', "State", ""), EV_RETURNS_VOID,
 		"Used to set the state of objectives from the script.\n" \
 		"For example, use this to invalidate an objective when something happens in your mission.\n" \
 		"The first argument is the numerical index of the objective (taking 'user' objective indices, starting at 1).\n" \
 		"Choose from the following for the second argument: OBJ_INCOMPLETE, OBJ_COMPLETE, OBJ_INVALID, OBJ_FAILED.\n" \
 		"Use this on $player1 like $player1.setObjectiveState(1, OBJ_COMPLETE);" );
 
-const idEventDef EV_Player_GetObjectiveState( "getObjectiveState", EventArgs('d', "ObjNum", "Starts counting at 1"), 'd', 
+const idEventDef EV_Player_GetObjectiveState( "getObjectiveState", EventArgs('d', "ObjNum", "Starts counting at 1"), 'd',
 		"Returns the current state of the objective with the number ObjNum. \n" \
 		"State is one of the following: OBJ_INCOMPLETE = 0, OBJ_COMPLETE = 1, OBJ_INVALID = 2, OBJ_FAILED = 3");
 
-const idEventDef EV_Player_SetObjectiveComp( "setObjectiveComp", 
-		EventArgs(	'd', "ObjNum", "objective number. Starts counting at 1", 
-					'd', "CompNum", "component number. Starts counting at 1", 
-					'd', "state", "1 or 0 for true or false"), 
+const idEventDef EV_Player_SetObjectiveComp( "setObjectiveComp",
+		EventArgs(	'd', "ObjNum", "objective number. Starts counting at 1",
+					'd', "CompNum", "component number. Starts counting at 1",
+					'd', "state", "1 or 0 for true or false"),
 		EV_RETURNS_VOID, "Used to set the state of custom objective components");
 
 const idEventDef EV_Player_GetObjectiveComp( "getObjectiveComp", EventArgs('d', "ObjNum", "Starts counting at 1", 'd', "CompNum", "Starts counting at 1"),
 											 'd', "Used to get the state of custom objective components");
 
 const idEventDef EV_Player_ObjectiveUnlatch( "objectiveUnlatch", EventArgs('d', "ObjNum", ""), EV_RETURNS_VOID, "Unlatch an irreversible objective that has latched into a state");
-const idEventDef EV_Player_ObjectiveCompUnlatch( "objectiveCompUnlatch", EventArgs('d', "ObjNum", "", 'd', "CompNum", ""), EV_RETURNS_VOID, 
+const idEventDef EV_Player_ObjectiveCompUnlatch( "objectiveCompUnlatch", EventArgs('d', "ObjNum", "", 'd', "CompNum", ""), EV_RETURNS_VOID,
 		"Unlatch an irreversible objective component that has latched into a state");
 
 const idEventDef EV_Player_SetObjectiveVisible( "setObjectiveVisible", EventArgs('d', "ObjNum", "", 'd', "val", "1 for true, 0 for false"), EV_RETURNS_VOID, "Sets objective visibility.");
@@ -215,14 +216,14 @@ const idEventDef EV_Player_GetObjectiveVisible("getObjectiveVisible", EventArgs(
 const idEventDef EV_Player_SetObjectiveOptional( "setObjectiveOptional", EventArgs('d', "ObjNum", "", 'd', "val", "1 for true, 0 for false"), EV_RETURNS_VOID, "Sets objective mandatory." );
 const idEventDef EV_Player_SetObjectiveOngoing( "setObjectiveOngoing", EventArgs('d', "ObjNum", "", 'd', "val", "1 for true, 0 for false"), EV_RETURNS_VOID, "Sets objective ongoing." );
 
-const idEventDef EV_Player_SetObjectiveEnabling( "setObjectiveEnabling", 
-		EventArgs(	'd', "ObjNum", "", 
+const idEventDef EV_Player_SetObjectiveEnabling( "setObjectiveEnabling",
+		EventArgs(	'd', "ObjNum", "",
 					's', "strIn", "takes the form of a string that is a space-delimited list of integer objectives representing the new enabling objectives.\n" \
-									"E.g. : '1 2 3 4'"), EV_RETURNS_VOID, 
+									"E.g. : '1 2 3 4'"), EV_RETURNS_VOID,
 		"Set an objective's enabling objectives (objectives that must be completed before that objective may be completed).");
 
 // Tels: Modify the displayed text for an objective. Can also be a string template like #str_20000 (#3217)
-const idEventDef EV_Player_SetObjectiveText( "setObjectiveText", EventArgs('d', "ObjNum", "Starts counting at 1", 's', "newText", ""), EV_RETURNS_VOID, 
+const idEventDef EV_Player_SetObjectiveText( "setObjectiveText", EventArgs('d', "ObjNum", "Starts counting at 1", 's', "newText", ""), EV_RETURNS_VOID,
 		"Modify the displayed text for an objective. Can also be a string template like #str_20000");
 
 // Obsttorte (#5967)
@@ -230,7 +231,7 @@ const idEventDef EV_Player_SetObjectiveNotification("setObjectiveNotification", 
 		"Turns the notifications (sound ++ text) for objectives on/off.");
 
 // greebo: This allows scripts to set the "healthpool" for gradual healing
-const idEventDef EV_Player_GiveHealthPool("giveHealthPool", EventArgs('f', "amount", ""), EV_RETURNS_VOID, 
+const idEventDef EV_Player_GiveHealthPool("giveHealthPool", EventArgs('f', "amount", ""), EV_RETURNS_VOID,
 		"This increases/decreases the healthpool of the player by the given amount.\n" \
 		"The healthpool is gradually decreased over time, healing (damaging?) the player.");
 
@@ -247,14 +248,14 @@ const idEventDef EV_GetLocation("getLocation", EventArgs(), 'e', "Returns the id
 
 
 // greebo: These events are handling the FOV.
-const idEventDef EV_Player_StartZoom("startZoom", 
-		EventArgs(	'f', "duration", "duration of the transition in msec", 
-					'f', "startFOV", "The start FOV, this is clamped to [1..179]", 
-					'f', "endFOV", "The end FOV, this is clamped to [1..179]"), 
-		EV_RETURNS_VOID, 
+const idEventDef EV_Player_StartZoom("startZoom",
+		EventArgs(	'f', "duration", "duration of the transition in msec",
+					'f', "startFOV", "The start FOV, this is clamped to [1..179]",
+					'f', "endFOV", "The end FOV, this is clamped to [1..179]"),
+		EV_RETURNS_VOID,
 		"Call this to start the zoom in event. The player FOV is gradually zoomed in until over the given timespan.");
 
-const idEventDef EV_Player_EndZoom("endZoom", EventArgs('f', "duration", "duration of the transition in msec"),  EV_RETURNS_VOID, 
+const idEventDef EV_Player_EndZoom("endZoom", EventArgs('f', "duration", "duration of the transition in msec"),  EV_RETURNS_VOID,
 		"Starts the zoom out event, which performs a gradual transition back to the default FOV.\n" \
 		"May be called during a transition as well to intercept a pending zoom in transition.");
 
@@ -264,13 +265,13 @@ const idEventDef EV_Player_GetFov("getFov", EventArgs(), 'f',
 		"You can modify the current FOV with startZoom() and endZoom().");
 
 
-const idEventDef EV_Player_PauseGame("pauseGame", EventArgs(), EV_RETURNS_VOID, 
+const idEventDef EV_Player_PauseGame("pauseGame", EventArgs(), EV_RETURNS_VOID,
 		"Pauses the game. This should only be called for threads that are explicitly maintained\n" \
 		"by a special SDK method, because ordinary threads won't get executed during g_stopTime == true.\n" \
 		"Note: This is used by the objective GUI threads.\n" \
 		"Note: Must be called on the player entity, not the sys entity.");
 
-const idEventDef EV_Player_UnpauseGame("unpauseGame", EventArgs(), EV_RETURNS_VOID, 
+const idEventDef EV_Player_UnpauseGame("unpauseGame", EventArgs(), EV_RETURNS_VOID,
 		"Unpauses the game. Most scripts are not executed during g_stopTime == true and won't get into the position of calling this.");
 
 const idEventDef EV_Player_StartGamePlayTimer("startGamePlayTimer", EventArgs(), EV_RETURNS_VOID, "Resets the game play timer to zero and (re)starts it.");
@@ -278,7 +279,7 @@ const idEventDef EV_Player_StartGamePlayTimer("startGamePlayTimer", EventArgs(),
 const idEventDef EV_CheckAAS("checkAAS", EventArgs(), EV_RETURNS_VOID, "");
 
 // greebo: Allows scripts to set a named lightgem modifier to a certain value (e.g. "lantern" => 32)
-const idEventDef EV_Player_SetLightgemModifier("setLightgemModifier", EventArgs('s', "modifierName", "", 'd', "value", ""), EV_RETURNS_VOID, 
+const idEventDef EV_Player_SetLightgemModifier("setLightgemModifier", EventArgs('s', "modifierName", "", 'd', "value", ""), EV_RETURNS_VOID,
 		"Sets the named lightgem modifier to a certain value. An example would be the player lantern: setLightgemModifier(\"lantern\", 32).\n" \
 		"This way multiple modifiers can be set by concurrent script threads.");
 
@@ -291,34 +292,34 @@ const idEventDef EV_SetAirAccelerate( "setAirAccelerate", EventArgs('f', "newAcc
 const idEventDef EV_IsAirborne( "isAirborne", EventArgs(), 'd', "Checks whether the player is in the air." );
 
 // greebo: Changes the projectile entityDef name of the given weapon (e.g. "broadhead").
-const idEventDef EV_ChangeWeaponProjectile("changeWeaponProjectile", EventArgs('s', "weaponName", "", 's', "projectileDefName", ""), EV_RETURNS_VOID, 
+const idEventDef EV_ChangeWeaponProjectile("changeWeaponProjectile", EventArgs('s', "weaponName", "", 's', "projectileDefName", ""), EV_RETURNS_VOID,
 		"Changes the projectile entityDef name of the given weapon (e.g. \"broadhead\")\n" \
 		"to the specified entityDef (e.g. \"atdm:projectile_broadhead\").");
 
-const idEventDef EV_ResetWeaponProjectile("resetWeaponProjectile", EventArgs('s', "weaponName", ""), EV_RETURNS_VOID, 
+const idEventDef EV_ResetWeaponProjectile("resetWeaponProjectile", EventArgs('s', "weaponName", ""), EV_RETURNS_VOID,
 		"Reloads the original projectile def name from the weaponDef. Used to revert a change made by the event changeWeaponProjectile().");
 
-const idEventDef EV_ChangeWeaponName("changeWeaponName", EventArgs('s', "weaponName", "", 's', "displayName", ""), EV_RETURNS_VOID, 
+const idEventDef EV_ChangeWeaponName("changeWeaponName", EventArgs('s', "weaponName", "", 's', "displayName", ""), EV_RETURNS_VOID,
 		"Changes the display name of the given weapon item to something different.\n" \
 		"Pass an empty string to reset the display name to the definition as found in the weaponDef.");
 
-const idEventDef EV_GetCurWeaponName("getCurWeaponName", EventArgs(), 's', 
+const idEventDef EV_GetCurWeaponName("getCurWeaponName", EventArgs(), 's',
 		"Returns the name of the current weapon, as defined by \"inv_weapon_name\" in the weaponDef.");
 
-const idEventDef EV_SetActiveInventoryMapEnt("setActiveInventoryMapEnt", EventArgs('e', "mapEnt", ""), EV_RETURNS_VOID, 
+const idEventDef EV_SetActiveInventoryMapEnt("setActiveInventoryMapEnt", EventArgs('e', "mapEnt", ""), EV_RETURNS_VOID,
 		"Notify the player about a new active map entity. This clears out any previously active maps.");
 
-const idEventDef EV_ClearActiveInventoryMap("clearActiveInventoryMap", EventArgs(), EV_RETURNS_VOID, 
+const idEventDef EV_ClearActiveInventoryMap("clearActiveInventoryMap", EventArgs(), EV_RETURNS_VOID,
 		"Clear the active inventory map entity");	// grayman #3164
 
-const idEventDef EV_ClearActiveInventoryMapEnt("clearActiveInventoryMapEnt", EventArgs(), EV_RETURNS_VOID, 
+const idEventDef EV_ClearActiveInventoryMapEnt("clearActiveInventoryMapEnt", EventArgs(), EV_RETURNS_VOID,
 		"Clear the active inventory map entity"); // grayman #3164
 
 // ishtvan: Let scripts get the currently frobbed entity, and set "frob only used by" mode
-const idEventDef EV_Player_GetFrobbed("getFrobbed", EventArgs(), 'e', 
+const idEventDef EV_Player_GetFrobbed("getFrobbed", EventArgs(), 'e',
 		"Returns the currently frobhilighted entity. This includes entities the player has in his hands. Sets \"frob only used by\" mode");
 
-const idEventDef EV_Player_SetFrobOnlyUsedByInv("setFrobOnlyUsedByInv", EventArgs('d', "OnOff", ""), EV_RETURNS_VOID, 
+const idEventDef EV_Player_SetFrobOnlyUsedByInv("setFrobOnlyUsedByInv", EventArgs('d', "OnOff", ""), EV_RETURNS_VOID,
 		"Engages or disengages a mode where we only frobhilight entities that can be used by our current inventory item.\n" \
 		"This also disables general frobactions and only allows \"used by\" frob actions.");
 
@@ -327,17 +328,17 @@ const idEventDef EV_Player_SetPeekView("setPeekView", EventArgs('d', "OnOff", ""
 	"Toggle whether we should use a view from a peek entity as the player's view");
 
 // tels #3282:
-const idEventDef EV_Player_GetShouldered("getShouldered", EventArgs(), 'e', 
+const idEventDef EV_Player_GetShouldered("getShouldered", EventArgs(), 'e',
 		"Returns the currently shouldered body, otherwise $null_entity. See also getDragged(), getGrabbed() and getFrobbed().");
-const idEventDef EV_Player_GetDragged("getDragged", EventArgs(), 'e', 
+const idEventDef EV_Player_GetDragged("getDragged", EventArgs(), 'e',
 		"Returns the currently dragged body. Returns $null_entity if the body is shouldered, the player has nothing in his\n" \
 		"hands, or he has a non-AF entity in his hands. See also getShouldered(), getGrabbed() and getFrobbed().");
-const idEventDef EV_Player_GetGrabbed("getGrabbed", EventArgs(), 'e', 
+const idEventDef EV_Player_GetGrabbed("getGrabbed", EventArgs(), 'e',
 		"Returns the currently entity in the players hands. Returns $null_entity if the player has nothing in his hands\n" \
 		"Dragging or shouldering a body counts as grabbing it. See also getDragged(), getShouldered(), getFrobbed().");
 
 // grayman #3807
-const idEventDef EV_Player_SetSpyglassOverlayBackground("setSpyglassOverlayBackground", EventArgs(), EV_RETURNS_VOID, 
+const idEventDef EV_Player_SetSpyglassOverlayBackground("setSpyglassOverlayBackground", EventArgs(), EV_RETURNS_VOID,
 		"Sets the background overlay for the spyglass, depending on aspect ratio.");
 
 // grayman #4882
@@ -479,7 +480,7 @@ CLASS_DECLARATION( idActor, idPlayer )
 	// Obsttorte: script function to save the game
 	EVENT( EV_SAVEGAME,						idPlayer::Event_saveGame )
 	EVENT( EV_setSavePermissions,			idPlayer::Event_setSavePermissions )
-	
+
 	EVENT( EV_Player_SetPeekView,			idPlayer::Event_SetPeekView) // grayman #4882
 
 	//stgatilov: test functions
@@ -662,7 +663,7 @@ idPlayer::idPlayer() :
 	focusVehicle			= NULL;
 #endif
 	cursor					= NULL;
-	
+
 	oldMouseX				= 0;
 	oldMouseY				= 0;
 
@@ -718,7 +719,7 @@ idPlayer::idPlayer() :
 	holdFrobStartTime = 0;
 	holdFrobStartViewAxis.Zero();
 
-	// greebo: Initialise the frob trace contact material to avoid 
+	// greebo: Initialise the frob trace contact material to avoid
 	// crashing during map save when nothing has been frobbed yet
 	memset(&m_FrobTrace, 0, sizeof(trace_t));
 	m_bFrobOnlyUsedByInv	= false;
@@ -747,7 +748,7 @@ idPlayer::idPlayer() :
 	m_LightgemModifier		= 0;
 	m_LightgemValue			= 0;
 	m_fColVal				= 0;
-	m_fBlendColVal			= 0;	
+	m_fBlendColVal			= 0;
 	m_LightgemInterleave	= 0;
 	ignoreWeaponAttack		= false; // grayman #597
 	displayAASAreas			= false; // grayman #3032 - no need to save/restore
@@ -806,7 +807,7 @@ void idPlayer::SetupWeaponEntity()
 		weapon.GetEntity()->Clear();
 		currentWeapon = -1;
 	}
-	else 
+	else
 	{
 		weapon = static_cast<idWeapon *>( gameLocal.SpawnEntityType( idWeapon::Type, NULL ) );
 		weapon.GetEntity()->SetOwner( this );
@@ -828,6 +829,7 @@ idPlayer::Init
 */
 void idPlayer::Init( void ) {
 	const char			*value;
+	const idKeyValue	*kv;
 
 	noclip					= false;
 	godmode					= false;
@@ -1017,7 +1019,7 @@ void idPlayer::Init( void ) {
 
 	// execute the script so the script object's constructor takes effect immediately
 	scriptThread->Execute();
-	
+
 	forceScoreBoard		= false;
 	forcedReady			= false;
 
@@ -1040,8 +1042,8 @@ void idPlayer::Init( void ) {
 	}
 
 	cvarSystem->SetCVarBool( "ui_chat", false );
-	
-	
+
+
 	savePermissions = 0;
 
 	usePeekView = 0;       // grayman #4882
@@ -1056,7 +1058,7 @@ idPlayer::Spawn
 Prepare any resources used by the player.
 ==============
 */
-void idPlayer::Spawn( void ) 
+void idPlayer::Spawn( void )
 {
 	int			i;
 	idStr		temp;
@@ -1092,7 +1094,7 @@ void idPlayer::Spawn( void )
 	// SR CONTENTS_RESPONSE FIX
 	if( m_StimResponseColl->HasResponse() )
 		physicsObj.SetContents( physicsObj.GetContents() | CONTENTS_RESPONSE );
-	
+
 	physicsObj.SetClipMask( MASK_PLAYERSOLID );
 	SetPhysics( &physicsObj );
 	InitAASLocation();
@@ -1207,7 +1209,7 @@ void idPlayer::Spawn( void )
 	}
 	else
 		hiddenWeapon = false;
-	
+
 	if ( hud )
 	{
 		UpdateHudWeapon();
@@ -1353,7 +1355,7 @@ void idPlayer::AddWeaponsToInventory()
 
 		// Allocate a new weapon item using the found entityDef
 		CInventoryWeaponItemPtr item(new CInventoryWeaponItem(weaponDef, this));
-			
+
 		item->SetWeaponIndex(weaponNum);
 
 		// Add it to the weapon category, will be sorted later on
@@ -1396,7 +1398,7 @@ void idPlayer::NextInventoryMap()
 		if (m_MapCursorIdx < mapsCategory->GetNumItems()) {
 			//next map available, enable it
 			CInventoryItemPtr currItem = mapsCategory->GetItem(m_MapCursorIdx);
-			UseInventoryItem(EPressed, currItem, 0, false); 
+			UseInventoryItem(EPressed, currItem, 0, false);
 		}
 		else
 			m_MapCursorIdx = -1;
@@ -1411,7 +1413,7 @@ bool idPlayer::WaitUntilReady()
 		return true;
 	}
 
-	// Create the overlay if necessary	
+	// Create the overlay if necessary
 	if (m_WaitUntilReadyGuiHandle == OVERLAYS_INVALID_HANDLE)
 	{
 		m_WaitUntilReadyGuiHandle = CreateOverlay(cv_tdm_waituntilready_gui_file.GetString(), LAYER_WAITUNTILREADY);
@@ -1476,9 +1478,9 @@ bool idPlayer::WaitUntilReady()
 	// Redraw the GUI
 	gui->Redraw(m_WaitUntilReadyGuiTime);
 
-	// Increase the "private" GUI time 
+	// Increase the "private" GUI time
 	m_WaitUntilReadyGuiTime += USERCMD_MSEC;
-	
+
 	return ready;
 }
 
@@ -1522,7 +1524,7 @@ void idPlayer::CreateObjectivesGUI()
 	objectivesOverlay = CreateOverlay(cv_tdm_obj_gui_file.GetString(), LAYER_OBJECTIVES);
 
 	idUserInterface* objGUI = GetOverlay(objectivesOverlay);
-	
+
 	if (objGUI == NULL)
 	{
 		gameLocal.Error("Failed setting up objectives GUI: %s", cv_tdm_obj_gui_file.GetString());
@@ -1573,7 +1575,7 @@ void idPlayer::UpdateObjectivesGUI()
 	if (objectivesOverlay == -1) return;
 
 	idUserInterface* objGUI = m_overlays.getGui(objectivesOverlay);
-	
+
 	if (objGUI == NULL)
 	{
 		gameLocal.Error("Could not find objectives GUI: %s", cv_tdm_obj_gui_file.GetString());
@@ -1638,7 +1640,7 @@ void idPlayer::CreateInventoryGridGUI()
 	{
 		return;
 	}
-	
+
 	grid_currentCategory.SetInteger( -1 );
 	inventoryGridOverlay = CreateOverlay(cv_tdm_invgrid_gui_file.GetString(), LAYER_INVGRID);
 
@@ -1685,7 +1687,7 @@ void idPlayer::DestroyInventoryGridGUI()
 		idList<CInventoryItemPtr> items;
 		idStr categoryNames, categoryValues;
 		CollectItemsAndCategoriesForInventoryGrid( items, categoryNames, categoryValues );
-	
+
 		// Get inventory grid gui vars.
 		const int pageSize = GetGuiInt(inventoryGridOverlay, "PageSize");
 		const int currentPage = GetGuiInt(inventoryGridOverlay, "CurrentPage");
@@ -1742,8 +1744,8 @@ void idPlayer::ToggleInventoryGridGUI()
 void idPlayer::UpdateInventoryGridGUI()
 {
 	if (inventoryGridOverlay == -1)
-	{ 
-		return; 
+	{
+		return;
 	}
 
 	idUserInterface* invgridGUI = m_overlays.getGui(inventoryGridOverlay);
@@ -1753,7 +1755,7 @@ void idPlayer::UpdateInventoryGridGUI()
 		gameLocal.Error("Could not find inventory grid GUI: %s", cv_tdm_invgrid_gui_file.GetString());
 		return;
 	}
-	
+
 	// GUI requested close?
 	int closeGUI = GetGuiInt(inventoryGridOverlay, "CloseGUI");
 	if (closeGUI)
@@ -1768,7 +1770,7 @@ void idPlayer::UpdateInventoryGridGUI()
 	idStr categoryNames;
 	idStr categoryValues;
 	CollectItemsAndCategoriesForInventoryGrid( items, categoryNames, categoryValues );
-	
+
 	// Update available categories
 	SetGuiString( inventoryGridOverlay, "CategoryNames", categoryNames );
 	SetGuiString( inventoryGridOverlay, "CategoryValues", categoryValues );
@@ -1813,7 +1815,7 @@ void idPlayer::UpdateInventoryGridGUI()
 		SetGuiInt(inventoryGridOverlay, "PrevPageAvail", 0);
 	}
 
-	
+
 	// Clear entries until we determine if they hold an item.
 	invgridGUI->HandleNamedEvent("clearGrid");
 	// Update each inventory grid entry for current page.
@@ -1876,7 +1878,7 @@ void idPlayer::UpdateInventoryGridGUI()
 	SetGuiInt(inventoryGridOverlay, "LootJewels", lootJewels);
 	SetGuiInt(inventoryGridOverlay, "LootGoods", lootGoods);
 	SetGuiInt(inventoryGridOverlay, "LootTotal", lootTotal);
-	
+
 	// Loot icon.
 	CInventoryItemPtr lootItem = Inventory()->GetItem("Loot Info", "Loot");
 	if (lootItem != NULL)
@@ -1896,9 +1898,9 @@ void idPlayer::UpdateInventoryGridGUI()
 void idPlayer::SetupInventory()
 {
 	m_InventoryOverlay = CreateOverlay(cv_tdm_inv_gui_file.GetString(), LAYER_INVENTORY);
-	
+
 	idUserInterface* invGUI = m_overlays.getGui(m_InventoryOverlay);
-	
+
 	if (invGUI == NULL)
 	{
 		gameLocal.Error("Could not set up inventory GUI: %s", cv_tdm_inv_gui_file.GetString());
@@ -1925,7 +1927,7 @@ void idPlayer::SetupInventory()
 	CInventoryCategoryPtr category = m_WeaponCursor->GetCurrentCategory();
 	for (int i = 0; i < category->GetNumItems(); i++)
 	{
-		CInventoryWeaponItemPtr item = 
+		CInventoryWeaponItemPtr item =
 			std::dynamic_pointer_cast<CInventoryWeaponItem>(category->GetItem(i));
 
 		if (item->GetWeaponIndex() != 0 && item->IsAllowedEmpty())
@@ -1956,7 +1958,7 @@ void idPlayer::SetupInventory()
 
 			for (int i = 0; i < category->GetNumItems(); i++)
 			{
-				CInventoryWeaponItemPtr item = 
+				CInventoryWeaponItemPtr item =
 					std::dynamic_pointer_cast<CInventoryWeaponItem>(category->GetItem(i));
 
 				if (item->GetWeaponName() == weaponName)
@@ -1987,7 +1989,7 @@ void idPlayer::SetupInventory()
 	// in the weapon slot AND in the inventory at the same time.
 	crsr->AddCategoryIgnored(TDM_PLAYER_WEAPON_CATEGORY);
 
-	// The player always gets a dummy entry (so the player can have an empty space if he 
+	// The player always gets a dummy entry (so the player can have an empty space if he
 	// chooses to not see the inventory all the time.
 	CInventoryItemPtr it(new CInventoryItem(this));
 	it->SetName(TDM_DUMMY_ITEM);
@@ -2009,7 +2011,7 @@ void idPlayer::SetupInventory()
 	{
 		gameLocal.Error("Could not find loot inventory entityDef.\n");
 	}
-	
+
 	idEntity* lootItemEnt;
 	gameLocal.SpawnEntityDef(lootItemDef->dict, &lootItemEnt);
 
@@ -2020,7 +2022,7 @@ void idPlayer::SetupInventory()
 
 	// Flag this item as loot info item
 	lootItem->SetType(CInventoryItem::IT_LOOT_INFO);
-	
+
 	// Give player non-weapon items obtained from the Shop
 	for (int si = 0; si < startingItems.Num(); si++)
 	{
@@ -2140,13 +2142,13 @@ void idPlayer::Save( idSaveGame *savefile ) const {
 	savefile->WriteBool(inventoryHUDNeedsUpdate);
 
 	savefile->WriteInt(hudMessages.Num());
-	for (int i = 0; i < hudMessages.Num(); i++) 
+	for (int i = 0; i < hudMessages.Num(); i++)
 	{
 		savefile->WriteString(hudMessages[i]);
 	}
 
 	savefile->WriteInt(inventoryPickedUpMessages.Num());
-	for (int i = 0; i < inventoryPickedUpMessages.Num(); i++) 
+	for (int i = 0; i < inventoryPickedUpMessages.Num(); i++)
 	{
 		savefile->WriteString(inventoryPickedUpMessages[i]);
 	}
@@ -2472,7 +2474,7 @@ void idPlayer::Restore( idRestoreGame *savefile ) {
 	savefile->ReadInt(num);
 	hudMessages.Clear();
 	hudMessages.SetNum(num);
-	for (i = 0; i < num; i++) 
+	for (i = 0; i < num; i++)
 	{
 		savefile->ReadString(hudMessages[i]);
 	}
@@ -2480,7 +2482,7 @@ void idPlayer::Restore( idRestoreGame *savefile ) {
 	savefile->ReadInt(num);
 	inventoryPickedUpMessages.Clear();
 	inventoryPickedUpMessages.SetNum(num);
-	for (i = 0; i < num; i++) 
+	for (i = 0; i < num; i++)
 	{
 		savefile->ReadString(inventoryPickedUpMessages[i]);
 	}
@@ -2764,7 +2766,7 @@ void idPlayer::Restore( idRestoreGame *savefile ) {
 	savefile->ReadVec3(peekEntityViewOrigin); // grayman #4882
 
 	m_dynamicHUD.Reset();
-	
+
 	// create combat collision hull for exact collision detection
 	SetCombatModel();
 
@@ -2792,7 +2794,7 @@ idPlayer::PrepareForRestart
 void idPlayer::PrepareForRestart( void ) {
 	Spectate( true );
 	forceRespawn = true;
-	
+
 	// we will be restarting program, clear the client entities from program-related things first
 	ShutdownThreads();
 
@@ -2807,7 +2809,7 @@ idPlayer::Restart
 */
 void idPlayer::Restart( void ) {
 	idActor::Restart();
-	
+
 	{
 		// choose a random spot and prepare the point of view in case player is left spectating
 		assert( spectating );
@@ -2872,7 +2874,7 @@ Chooses a spawn location and spawns the player
 void idPlayer::SpawnFromSpawnSpot( void ) {
 	idVec3		spawn_origin;
 	idAngles	spawn_angles;
-	
+
 	SelectInitialSpawnPoint( spawn_origin, spawn_angles );
 	SpawnToPoint( spawn_origin, spawn_angles );
 }
@@ -3088,7 +3090,7 @@ bool idPlayer::UserInfoChanged( bool canModify ) {
 
 			userInfo->Set( "ui_spectate", "Play" );
 			modifiedInfo |= true;
-		} else if ( spectating ) {  
+		} else if ( spectating ) {
 			// allow player to leaving spectator mode if they were in it when si_spectators got turned off
 
 			forceRespawn = true;
@@ -3121,7 +3123,7 @@ void idPlayer::UpdateHudAmmo()
 	bool weaponSelected = (curWeapon != NULL && curWeapon->GetWeaponIndex() > 0);
 
 	hud->SetStateBool("WeaponAmmoVisible", weaponSelected && curWeapon->NeedsAmmo());
-	
+
 	if (!weaponSelected) return; // done here
 
 	hud->SetStateString("WeaponAmmoAmount", va("%d", curWeapon->GetAmmo()));
@@ -3201,13 +3203,13 @@ void idPlayer::UpdateHudWeapon( bool flashWeapon )
 	// Update the visibility of the various GUI elements
 	hud->SetStateBool("WeaponIconVisible", weaponSelected);
 	hud->SetStateBool("WeaponNameVisible", weaponSelected);
-		
+
 	if (!weaponSelected) return; // done here
 
 	// Set the icon and name strings
 	hud->SetStateString("WeaponName", common->Translate( curWeapon->GetName().c_str() ));
 	hud->SetStateString("WeaponIcon", curWeapon->GetIcon().c_str());
-	
+
 	hud->HandleNamedEvent("OnWeaponChange");
 
 	UpdateHudAmmo();
@@ -3261,7 +3263,7 @@ void idPlayer::DrawHUD(idUserInterface *_hud)
 //	if(cv_lg_debug.GetInteger() != 0)
 //		PrintDebugHUD();
 
-	/*renderSystem->DrawSmallStringExt(1, 30, 
+	/*renderSystem->DrawSmallStringExt(1, 30,
 		va("Player velocity: %f", physicsObj.GetLinearVelocity().Length()), idVec4( 1, 1, 1, 1 ), false, declManager->FindMaterial( "textures/bigchars" ));*/
 
 	const char *name;
@@ -3372,13 +3374,13 @@ void idPlayer::DrawHUD(idUserInterface *_hud)
 		}
 
 		// #4906 STiFU: Cursor reenabled as a FrobHelper
-		if (cursor && cv_frobhelper_active.GetBool()) 
+		if (cursor && cv_frobhelper_active.GetBool())
 		{
 			cursor->Redraw(gameLocal.realClientTime);
 		}
 
 		// J.C.Denton Start
-		float fFadeDelay = Max(0.0001f, cv_lg_fade_delay.GetFloat() );		// Avoid divide by zero errors. 
+		float fFadeDelay = Max(0.0001f, cv_lg_fade_delay.GetFloat() );		// Avoid divide by zero errors.
 		m_fBlendColVal = Lerp( m_fBlendColVal, (float)m_LightgemValue, (gameLocal.time - gameLocal.previousTime)/(1000.0f * fFadeDelay ) );
 		// J.C.Denton End
 
@@ -3424,7 +3426,7 @@ void idPlayer::EnterCinematic( void ) {
 	Hide();
 
 	physicsObj.SetLinearVelocity( vec3_origin );
-	
+
 	SetState( "EnterCinematic" );
 	UpdateScript();
 
@@ -3524,7 +3526,7 @@ void idPlayer::UpdateConditions( void )
 	//AI_RUN			= ( usercmd.buttons & BUTTON_RUN ) && ( ( !pm_stamina.GetFloat() ) || ( stamina > pm_staminathreshold.GetFloat() ) );
 	AI_RUN = ( usercmd.buttons & BUTTON_RUN ) && true ;
 	AI_DEAD			= ( health <= 0 );
-	
+
 	int creepLimit = cv_pm_creepmod.GetFloat() * 127;
 	AI_CREEP = m_CreepIntent ||
 		(idMath::Abs(usercmd.forwardmove) <= creepLimit && idMath::Abs(usercmd.rightmove) <= creepLimit);
@@ -3553,7 +3555,7 @@ void idPlayer::WeaponFireFeedback( const idDict *weaponDef ) {
 idPlayer::StopFiring
 ===============
 */
-void idPlayer::StopFiring( void ) 
+void idPlayer::StopFiring( void )
 {
 	AI_ATTACK_HELD	= false;
 	AI_BLOCK_HELD	= false;
@@ -3570,7 +3572,7 @@ void idPlayer::StopFiring( void )
 idPlayer::FireWeapon
 ===============
 */
-void idPlayer::FireWeapon( void ) 
+void idPlayer::FireWeapon( void )
 {
 	idMat3 axis;
 	idVec3 muzzle;
@@ -3586,9 +3588,9 @@ void idPlayer::FireWeapon( void )
 		}
 	}
 
-	if ( !hiddenWeapon && weapon.GetEntity()->IsReady() ) 
+	if ( !hiddenWeapon && weapon.GetEntity()->IsReady() )
 	{
-		if ( weapon.GetEntity()->AmmoInClip() || weapon.GetEntity()->AmmoAvailable() ) 
+		if ( weapon.GetEntity()->AmmoInClip() || weapon.GetEntity()->AmmoAvailable() )
 		{
 			AI_ATTACK_HELD = true;
 			weapon.GetEntity()->BeginAttack();
@@ -3605,14 +3607,14 @@ void idPlayer::FireWeapon( void )
 idPlayer::BlockWeapon
 ===============
 */
-void idPlayer::BlockWeapon( void ) 
+void idPlayer::BlockWeapon( void )
 {
-	if ( privateCameraView ) 
+	if ( privateCameraView )
 	{
 		return;
 	}
 
-	if ( !hiddenWeapon && weapon.GetEntity()->IsReady() ) 
+	if ( !hiddenWeapon && weapon.GetEntity()->IsReady() )
 	{
 		if (AI_ATTACK_HELD) // grayman #597
 		{
@@ -3676,7 +3678,7 @@ bool idPlayer::Give( const char *statname, const char *value ) {
 		}
 
 	}
-	
+
 #ifdef PLAYER_HEARTBEAT
 	else if ( !idStr::Icmp( statname, "heartRate" ) )
 	{
@@ -3711,7 +3713,7 @@ adds health to the player health pool
 ===============
 */
 void idPlayer::GiveHealthPool( float amt ) {
-	
+
 	if ( AI_DEAD ) {
 		return;
 	}
@@ -3803,7 +3805,7 @@ idPlayer::SlotForWeapon
 ==================
 */
 int idPlayer::SlotForWeapon( const char *weaponName )
-{	
+{
 	// Find the weapon category
 	CInventoryCategoryPtr weaponCategory = m_WeaponCursor->GetCurrentCategory();
 
@@ -3812,11 +3814,11 @@ int idPlayer::SlotForWeapon( const char *weaponName )
 		DM_LOG(LC_INVENTORY, LT_ERROR)LOGSTRING("Could not find weapon category in inventory.\r");
 		return -1;
 	}
-	
+
 	// Look for the weapon with the given name
 	for (int i = 0; i < weaponCategory->GetNumItems(); i++)
 	{
-		CInventoryWeaponItemPtr weaponItem = 
+		CInventoryWeaponItemPtr weaponItem =
 			std::dynamic_pointer_cast<CInventoryWeaponItem>(weaponCategory->GetItem(i));
 
 		// Is this the right weapon?
@@ -3904,7 +3906,7 @@ void idPlayer::NextWeapon() {
 	if (numWeapons == 0) {
 		return; // no weapons...
 	}
-	
+
 	// Get the current weaponItem
 	CInventoryWeaponItemPtr curItem = GetCurrentWeaponItem();
 
@@ -3960,7 +3962,7 @@ void idPlayer::PrevWeapon( void ) {
 
 	int curWeaponIndex = curItem->GetWeaponIndex();
 	int highestIndex = GetHightestWeaponIndex();
-	
+
 	int prevWeaponIndex = curWeaponIndex;
 
 	do
@@ -3994,7 +3996,7 @@ bool idPlayer::SelectWeapon( int num, bool force )
 		} else {
 			weapon.GetEntity()->RaiseWeapon();
 		}
-	}	
+	}
 
 	if (m_WeaponCursor == NULL) {
 		return false;
@@ -4029,9 +4031,9 @@ bool idPlayer::SelectWeapon( int num, bool force )
 	for (int i = 0; i < category->GetNumItems(); i++)
 	{
 		// Try to retrieve a weapon item from the given category
-		CInventoryWeaponItemPtr item = 
+		CInventoryWeaponItemPtr item =
 			std::dynamic_pointer_cast<CInventoryWeaponItem>(category->GetItem(i));
-		
+
 		if (item != NULL && item->GetWeaponIndex() == num)
 		{
 			if (item->GetAmmo() <= 0 && item->NeedsAmmo())
@@ -4084,7 +4086,7 @@ void idPlayer::DropWeapon( bool died ) {
 	if ( spectating || weaponGone || weapon.GetEntity() == NULL ) {
 		return;
 	}
-	
+
 	if ( ( !died && !weapon.GetEntity()->IsReady() ) || weapon.GetEntity()->IsReloading() ) {
 		return;
 	}
@@ -4092,7 +4094,7 @@ void idPlayer::DropWeapon( bool died ) {
 	// inclip is which amount is in clip right now
 	ammoavailable = weapon.GetEntity()->AmmoAvailable();
 	inclip = weapon.GetEntity()->AmmoInClip();
-	
+
 	// don't drop a grenade if we have none left
 	/*if ( !idStr::Icmp( idWeapon::GetAmmoNameForNum( weapon.GetEntity()->GetAmmoType() ), "ammo_grenades" ) && ( ammoavailable - inclip <= 0 ) ) {
 		return;
@@ -4230,7 +4232,7 @@ void idPlayer::Weapon_Combat( void ) {
 				SetState( newstate );
 				UpdateScript();
 			}
-			weaponCatchup = false;			
+			weaponCatchup = false;
 		} else {
 
 			// grayman #597 - if the current weapon is an arrow, and the ideal
@@ -4249,7 +4251,7 @@ void idPlayer::Weapon_Combat( void ) {
 
 			if ( weapon.GetEntity()->IsHolstered() ) {
 				assert( idealWeapon >= 0 );
-				
+
 				if ( !spawnArgs.GetBool( va( "weapon%d_toggle", currentWeapon ) ) ) {
 					previousWeapon = currentWeapon;
 				}
@@ -4262,7 +4264,7 @@ void idPlayer::Weapon_Combat( void ) {
 			}
 		}
 	} else {
-		weaponGone = false;	// if you drop and re-get weap, you may miss the = false above 
+		weaponGone = false;	// if you drop and re-get weap, you may miss the = false above
 		if ( weapon.GetEntity()->IsHolstered() ) {
 			if ( !weapon.GetEntity()->AmmoAvailable() )
 			{
@@ -4296,7 +4298,7 @@ void idPlayer::Weapon_Combat( void ) {
 
 	// check for attack
 	AI_WEAPON_FIRED = false;
-	if ( !influenceActive ) 
+	if ( !influenceActive )
 	{
 		// grayman #597 - if ignoreWeaponAttack is true, the weapon is no longer in the attack state, but the attack button is still depressed
 		if ( ( usercmd.buttons & BUTTON_ATTACK ) && !weaponGone && !ignoreWeaponAttack)
@@ -4312,19 +4314,19 @@ void idPlayer::Weapon_Combat( void ) {
 
 	// check for block
 	AI_WEAPON_BLOCKED = false;
-	if ( !influenceActive ) 
+	if ( !influenceActive )
 	{
 		if ( ( usercmd.buttons & BUTTON_ZOOM ) && !weaponGone )
 		{
 			BlockWeapon();
 		}
-		else if ( oldButtons & BUTTON_ZOOM ) 
+		else if ( oldButtons & BUTTON_ZOOM )
 		{
 			AI_BLOCK_HELD = false;
 			weapon.GetEntity()->EndBlock();
 		}
 	}
-	
+
 	// update our ammo clip in our inventory
 	if ( currentWeapon == idealWeapon ) {
 		UpdateHudAmmo();
@@ -4378,7 +4380,7 @@ void idPlayer::Weapon_Combat( void ) {
 			}
 		}
 	}
-	
+
 }
 
 /*
@@ -4397,11 +4399,11 @@ void idPlayer::LowerWeapon( void ) {
 idPlayer::RaiseWeapon
 ===============
 */
-void idPlayer::RaiseWeapon( void ) 
+void idPlayer::RaiseWeapon( void )
 {
-	if (weapon.GetEntity() && 
-		weapon.GetEntity()->IsHidden() && 
-		!(GetImmobilization() & EIM_ATTACK)) 
+	if (weapon.GetEntity() &&
+		weapon.GetEntity()->IsHidden() &&
+		!(GetImmobilization() & EIM_ATTACK))
 	{
 		weapon.GetEntity()->RaiseWeapon();
 	}
@@ -4523,7 +4525,7 @@ void idPlayer::UpdateWeapon( void ) {
 		StopFiring();
 		weapon.GetEntity()->LowerWeapon();
 	}
-	
+
 	if ( hiddenWeapon ) {
 		weapon.GetEntity()->LowerWeapon();
 	}
@@ -4698,7 +4700,7 @@ void idPlayer::SpectateFreeFly( bool force ) {
 			idAngles angle = player->viewAngles;
 			angle[ 2 ] = 0;
 			SetViewAngles( angle );
-		} else {	
+		} else {
 			SelectInitialSpawnPoint( spawn_origin, spawn_angles );
 			spawn_origin[ 2 ] += pm_normalviewheight.GetFloat();
 			spawn_origin[ 2 ] += SPECTATE_RAISE;
@@ -4820,7 +4822,7 @@ bool idPlayer::Collide( const trace_t &collision, const idVec3 &velocity ) {
 	}
 	idEntity *other = gameLocal.entities[ collision.c.entityNum ];
 	// don't let player collide with grabber entity
-	if ( other && other != gameLocal.m_Grabber->GetSelected() ) 
+	if ( other && other != gameLocal.m_Grabber->GetSelected() )
 	{
 		ProcCollisionStims( other, collision.c.id );
 
@@ -4842,7 +4844,7 @@ bool idPlayer::Collide( const trace_t &collision, const idVec3 &velocity ) {
 ================
 idPlayer::UpdateLocation
 
-Searches nearby locations 
+Searches nearby locations
 ================
 */
 void idPlayer::UpdateLocation( void ) {
@@ -4904,14 +4906,14 @@ Check for hard landings that generate sound events
 */
 
 void idPlayer::CrashLand( const idVec3 &savedOrigin, const idVec3 &savedVelocity ) {
-	
+
 	AI_SOFTLANDING = false;
 	AI_HARDLANDING = false;
 
 	CrashLandResult result = idActor::CrashLand( physicsObj, savedOrigin, savedVelocity );
 	bool isJumping = (gameLocal.time - physicsObj.GetLastJumpTime()) < JUMP_DETECTION_TIME; // SteveL #3716
 
-	// grayman #3485 - new way to decide whether the player has landed, for footstep playing 
+	// grayman #3485 - new way to decide whether the player has landed, for footstep playing
 	if (result.hasLanded && (savedVelocity.z < -300 || isJumping))
 	{
 		hasLanded = true;
@@ -4923,7 +4925,7 @@ void idPlayer::CrashLand( const idVec3 &savedOrigin, const idVec3 &savedVelocity
 	}
 
 	/* old way
-	if (result.hasLanded && 
+	if (result.hasLanded &&
 		( (!AI_CROUCH && savedVelocity.z < -300) || savedVelocity.z < -600) )
 	{
 		hasLanded = true;
@@ -4987,7 +4989,7 @@ void idPlayer::BobCycle( const idVec3 &pushVelocity ) {
 		bobCycle = 0;
 		bobFoot = 0;
 		bobfracsin = 0;
-	} 
+	}
 	else if (physicsObj.GetWaterLevel() >= WATERLEVEL_HEAD || noclip)
 	{
 	    // nbohr1more: #4625: stop flickering noclip animations
@@ -4995,7 +4997,7 @@ void idPlayer::BobCycle( const idVec3 &pushVelocity ) {
 		{
 		  SetAnimState(ANIMCHANNEL_LEGS, "Legs_Idle", 4);
 		}
-		
+
 
     	// No viewbob when fully underwater or in noclip mode, start at beginning of cycle again
 		bobCycle = 0;
@@ -5012,13 +5014,13 @@ void idPlayer::BobCycle( const idVec3 &pushVelocity ) {
 		bobCycle = 0;
 		bobFoot = 0;
 		bobfracsin = 0;
-	} 
+	}
 	else {
 		if ( physicsObj.IsCrouching() ) {
 			// greebo: Double the crouchbob speed when fully running
 			bobmove = pm_crouchbob.GetFloat() * (1 + bobFrac);
-		} 
-		else 
+		}
+		else
 		{
 			// vary the bobbing based on the speed of the player
 			bobmove = pm_walkbob.GetFloat() * ( 1.0f - bobFrac ) + pm_runbob.GetFloat() * bobFrac;
@@ -5029,26 +5031,26 @@ void idPlayer::BobCycle( const idVec3 &pushVelocity ) {
 		{
 			bobmove *= 0.5f * (1 - bobFrac);
 		}
-		
+
 		// additional explanatory comments added by Crispy
-		
+
 		old = bobCycle;
-		
+
 		// bobCycle is effectively an 16-bit integer, which increases at a speed determined by bobmove
 		// and wraps around when it exceeds 16 bits.
 		// duzenko #4409 - use variable frame time instead of const
 		// stgatilov #4696: extended from 8-bit to 16-bit for high FPS case
 		bobCycle = (int)( old + bobmove * (gameLocal.getMsec() << 8) ) & 0xFFFF;
-		
+
 		// bobFoot = most significant bit of bobCycle, so it will be equal to 1 for half the time,
 		// and 0 for the other half. This represents which foot we're placing our weight on right now.
 		bobFoot = ( bobCycle & 0x8000 ) != 0;
-		
+
 		// Take the other 15 bits of bobCycle, scale them to range from 0 to PI, and take the sine.
 		// The result produces positive values only, from within the first "hump" of the function.
 		// (Look at the graph of sin(x) with x = 0...PI)
 		bobfracsin = idMath::Fabs( sin( ( bobCycle & 0x7FFF ) / float( 0x8000 ) * idMath::PI ) );
-		
+
 		// Crispy: Play footstep sounds when we hit the bottom of the cycle (i.e. when bobFoot changes)
 		if ((old & 0x8000) != (bobCycle & 0x8000)) {
 			// We've changed feet, so play a footstep
@@ -5064,7 +5066,7 @@ void idPlayer::BobCycle( const idVec3 &pushVelocity ) {
 	// add angles based on velocity
 	delta = velocity * viewaxis[0];
 	viewBobAngles.pitch += delta * pm_runpitch.GetFloat();
-	
+
 	delta = velocity * viewaxis[1];
 	viewBobAngles.roll -= delta * pm_runroll.GetFloat();
 
@@ -5085,6 +5087,10 @@ void idPlayer::BobCycle( const idVec3 &pushVelocity ) {
 		delta = -delta;
 	}
 	viewBobAngles.roll += delta;
+
+	// VR: don't want player bob
+	viewBobAngles.pitch = 0;
+	viewBobAngles.roll = 0;
 
 	// calculate position for view bobbing
 	viewBob.Zero();
@@ -5117,6 +5123,7 @@ void idPlayer::BobCycle( const idVec3 &pushVelocity ) {
 	if ( bob > 6 ) {
 		bob = 6;
 	}
+	bob = 0; // VR: don't want player bob
 	viewBob[2] += bob;
 
 	// add fall height
@@ -5154,6 +5161,7 @@ idPlayer::SetViewAngles
 void idPlayer::SetViewAngles( const idAngles &angles ) {
 	UpdateDeltaViewAngles( angles );
 	viewAngles = angles;
+	actualViewAngles.yaw = angles.yaw; // VR
 }
 
 /*
@@ -5161,15 +5169,15 @@ void idPlayer::SetViewAngles( const idAngles &angles ) {
 idPlayer::UpdateViewAngles
 ================
 */
-void idPlayer::UpdateViewAngles( void ) 
+void idPlayer::UpdateViewAngles( void )
 {
 	int i;
 	idAngles delta;
 	idAngles TestAngles = viewAngles;
 
-	if ( !noclip && 
-		( gameLocal.inCinematic || privateCameraView || gameLocal.GetCamera() || 
-		  influenceActive == INFLUENCE_LEVEL2 || GetImmobilization() & EIM_VIEW_ANGLE ) ) 
+	if ( !noclip &&
+		( gameLocal.inCinematic || privateCameraView || gameLocal.GetCamera() ||
+		  influenceActive == INFLUENCE_LEVEL2 || GetImmobilization() & EIM_VIEW_ANGLE ) )
 	{
 		// no view changes at all, but we still want to update the deltas or else when
 		// we get out of this mode, our view will snap to a kind of random angle
@@ -5190,13 +5198,13 @@ void idPlayer::UpdateViewAngles( void )
 	}
 
 	// circularly clamp the angles with deltas
-	for ( i = 0; i < 3; i++ ) 
+	for ( i = 0; i < 3; i++ )
 	{
 		cmdAngles[i] = SHORT2ANGLE( usercmd.angles[i] );
-		if ( influenceActive == INFLUENCE_LEVEL3 ) 
+		if ( influenceActive == INFLUENCE_LEVEL3 )
 		{
 			TestAngles[i] += idMath::ClampFloat( -1.0f, 1.0f, idMath::AngleDelta( idMath::AngleNormalize180( SHORT2ANGLE( usercmd.angles[i]) + deltaViewAngles[i] ) , viewAngles[i] ) );
-		} 
+		}
 		else if( GetTurnHinderance() != 1.0f )
 		{
 			TestAngles[i] += GetTurnHinderance() * idMath::AngleDelta( idMath::AngleNormalize180( SHORT2ANGLE( usercmd.angles[i]) + deltaViewAngles[i] ) , viewAngles[i] );
@@ -5208,6 +5216,20 @@ void idPlayer::UpdateViewAngles( void )
 	}
 	if ( !centerView.IsDone( gameLocal.time ) ) {
 		TestAngles.pitch = centerView.GetCurrentValue(gameLocal.time);
+	}
+
+	if (vr_useMotionControllers.GetBool()) {
+		actualViewAngles.yaw = idMath::AngleNormalize180( actualViewAngles.yaw + TestAngles.yaw - viewAngles.yaw);
+		// adjust the viewAngles to look at the frob position
+		idVec3 forward = frobAimIndicatorPos - firstPersonViewOrigin;
+		forward.Normalize();
+		float pitch = idMath::ASin( -forward.z );
+		float cp = idMath::Cos( pitch );
+		float yaw = idMath::ASin( forward.y / cp );
+		if ( forward.x / cp < 0 ) {
+			yaw = idMath::PI - yaw;
+		}
+		TestAngles = idAngles( RAD2DEG(pitch), RAD2DEG(yaw), 0 );
 	}
 
 	// clamp the pitch
@@ -5256,10 +5278,10 @@ Being at less than 25% stamina adds 5 beats per second up to ZEROSTAMINA_HEARTRA
 All heartrates are target rates. The heart rate will start falling as soon as there have been no adjustments for 5 seconds
 Once it starts falling it always tries to get to DEF_HEARTRATE
 
-The exception to the above rule is upon death at which point the rate is set to DYING_HEARTRATE and starts falling 
+The exception to the above rule is upon death at which point the rate is set to DYING_HEARTRATE and starts falling
 immediately to zero
 
-Heart rate volumes go from zero ( -40 db for DEF_HEARTRATE ) to 5 db ( for MAX_HEARTRATE ) the volume is 
+Heart rate volumes go from zero ( -40 db for DEF_HEARTRATE ) to 5 db ( for MAX_HEARTRATE ) the volume is
 scaled linearly based on the actual rate
 
 Exception to the above rule is once the player is dead, the dying heart rate starts at either the current volume if
@@ -5364,7 +5386,7 @@ void idPlayer::SetCurrentHeartRate( void )
 				pct = 0.0f;
 			}
 			pct *= ((float)deathVol - (float)zeroVol);
-		} 
+		}
 
 		pct += (float)zeroVol;
 
@@ -5690,10 +5712,10 @@ idPlayer::PerformImpulse
 */
 void idPlayer::PerformImpulse( int impulse ) {
 
-	if ( impulse >= IMPULSE_WEAPON0 && impulse <= IMPULSE_WEAPON12 ) 
+	if ( impulse >= IMPULSE_WEAPON0 && impulse <= IMPULSE_WEAPON12 )
 	{
 		// Prevent the player from choosing to switch weapons.
-		if ( GetImmobilization() & EIM_WEAPON_SELECT ) 
+		if ( GetImmobilization() & EIM_WEAPON_SELECT )
 		{
 			return;
 		}
@@ -5728,12 +5750,12 @@ void idPlayer::PerformImpulse( int impulse ) {
 			UpdateInventoryGridGUI();
 
 			// Prevent the player from choosing to switch weapons.
-			if ( GetImmobilization() & EIM_WEAPON_SELECT ) 
+			if ( GetImmobilization() & EIM_WEAPON_SELECT )
 			{
 				return;
 			}
 
-			if (cv_dynamicHUD_weaponInventory_nextPrevOverride.GetBool() 
+			if (cv_dynamicHUD_weaponInventory_nextPrevOverride.GetBool()
 				&& m_dynamicHUD.weaponInventory.GetAlpha() == 0.0f
 				&& !m_dynamicHUD.weaponInventory.ShouldBeShown())
 			{
@@ -5766,12 +5788,12 @@ void idPlayer::PerformImpulse( int impulse ) {
 			UpdateInventoryGridGUI();
 
 			// Prevent the player from choosing to switch weapons.
-			if ( GetImmobilization() & EIM_WEAPON_SELECT ) 
+			if ( GetImmobilization() & EIM_WEAPON_SELECT )
 			{
 				return;
 			}
 
-			if (cv_dynamicHUD_weaponInventory_nextPrevOverride.GetBool() 
+			if (cv_dynamicHUD_weaponInventory_nextPrevOverride.GetBool()
 				&& m_dynamicHUD.weaponInventory.GetAlpha() == 0.0f
 				&& !m_dynamicHUD.weaponInventory.ShouldBeShown())
 			{
@@ -5817,12 +5839,12 @@ void idPlayer::PerformImpulse( int impulse ) {
 						m_CrouchIntent = !m_CrouchIntent;
 					}
 				}
-			}		
+			}
 			else
 			{
 				m_CrouchIntent = true;
 			}
-			
+
 			m_ButtonStateTracker.StartTracking(impulse);
 		}
 		break;
@@ -5861,7 +5883,7 @@ void idPlayer::PerformImpulse( int impulse ) {
 			DM_LOG(LC_AI, LT_DEBUG)LOGSTRING("Attempting hiding spot test");
 			idVec3 searchOrigin = GetEyePosition();
 			idBounds searchBounds (searchOrigin);
-			
+
 			idVec3 forward;
 			idVec3 right;
 			viewAngles.ToVectors (&forward, &right);
@@ -5871,7 +5893,7 @@ void idPlayer::PerformImpulse( int impulse ) {
 			idVec3 widthPoint = searchOrigin + (right * 300.0f);
 			searchBounds.AddPoint (widthPoint);
 			idVec3 widthPoint2 = searchOrigin - (right * 300.0f);
-			searchBounds.AddPoint (widthPoint2);  
+			searchBounds.AddPoint (widthPoint2);
 			idVec3 endPoint = searchOrigin + (forward * 1000.0f);
 			searchBounds.AddPoint (endPoint);
 
@@ -5895,7 +5917,7 @@ void idPlayer::PerformImpulse( int impulse ) {
 			{
 				DM_LOG(LC_AI, LT_WARNING)LOGSTRING("No default AAS is present for map, number of AAS: %d\n", gameLocal.NumAAS());
 			}
-			
+
 		}
 		break;
 
@@ -5907,7 +5929,7 @@ void idPlayer::PerformImpulse( int impulse ) {
 
 /*				//LAS.pvsToAASMappingTable.DebugShowMappings(10000);
 				idAASLocal* aas = dynamic_cast<idAASLocal*>(gameLocal.GetAAS(cv_debug_aastype.GetString()));
-					
+
 				if (aas != NULL)
 				{
 					aas->DrawAreas(GetEyePosition());
@@ -6026,7 +6048,7 @@ void idPlayer::PerformImpulse( int impulse ) {
 
 			NextPrevInventoryItem(-1);
 
-			m_dynamicHUD.itemInventory.Show(true); // #6677: DynHUD_ItemRule1			
+			m_dynamicHUD.itemInventory.Show(true); // #6677: DynHUD_ItemRule1
 		}
 		break;
 
@@ -6156,7 +6178,7 @@ void idPlayer::PerformImpulse( int impulse ) {
 		}
 		break;
 
-	} 
+	}
 }
 
 void idPlayer::PerformKeyRepeat(int impulse, int holdTime)
@@ -6330,10 +6352,10 @@ int idPlayer::GetImmobilization()
 idPlayer::GetHinderance
 ==============
 */
-float idPlayer::GetHinderance( void ) 
+float idPlayer::GetHinderance( void )
 {
 	// Has something changed since the cache was last calculated?
-	if (m_hinderanceCache < 0.0f) 
+	if (m_hinderanceCache < 0.0f)
 	{
 		// Recalculate the hinderance from scratch.
 		float mCap = 1.0f, aCap = 1.0f;
@@ -6343,13 +6365,13 @@ float idPlayer::GetHinderance( void )
 			idVec3 vec = m_hinderance.GetVector(kv->GetKey());
 			mCap *= vec[0];
 
-			if ( aCap > vec[1] ) 
+			if ( aCap > vec[1] )
 			{
 				aCap = vec[1];
 			}
 		}
 
-		if ( aCap > mCap ) 
+		if ( aCap > mCap )
 		{
 			aCap = mCap;
 		}
@@ -6365,10 +6387,10 @@ float idPlayer::GetHinderance( void )
 idPlayer::GetTurnHinderance
 ==============
 */
-float idPlayer::GetTurnHinderance( void ) 
+float idPlayer::GetTurnHinderance( void )
 {
 	// Has something changed since the cache was last calculated?
-	if (m_TurnHinderanceCache < 0.0f) 
+	if (m_TurnHinderanceCache < 0.0f)
 	{
 		// Recalculate the hinderance from scratch.
 		float mCap = 1.0f, aCap = 1.0f;
@@ -6378,13 +6400,13 @@ float idPlayer::GetTurnHinderance( void )
 			idVec3 vec = m_TurnHinderance.GetVector(kv->GetKey());
 			mCap *= vec[0];
 
-			if ( aCap > vec[1] ) 
+			if ( aCap > vec[1] )
 			{
 				aCap = vec[1];
 			}
 		}
 
-		if ( aCap > mCap ) 
+		if ( aCap > mCap )
 		{
 			aCap = mCap;
 		}
@@ -6400,7 +6422,7 @@ float idPlayer::GetTurnHinderance( void )
 idPlayer::EvaluateControls
 ==============
 */
-void idPlayer::EvaluateControls( void ) 
+void idPlayer::EvaluateControls( void )
 {
 	// check for respawning
 	// TDM: Section removed, click-to-respawn functionality not needed for TDM
@@ -6433,11 +6455,11 @@ void idPlayer::EvaluateControls( void )
 
 void idPlayer::EvaluateCrouch()
 {
-	if ( GetImmobilization() & EIM_CROUCH) 
+	if ( GetImmobilization() & EIM_CROUCH)
 	{
 		m_IdealCrouchState = false;
 		return;
-	} 
+	}
 	m_IdealCrouchState = m_CrouchIntent;
 }
 
@@ -6460,9 +6482,9 @@ void idPlayer::StartMouseGesture( int impulse, int thresh, EMouseTest test, bool
 	m_MouseGesture.StartPos.x = usercmd.mx;
 	m_MouseGesture.StartPos.y = usercmd.my;
 	m_MouseGesture.motion = vec2_zero;
-	
+
 	// NOTE: Do not clear the last result as we may use it again if we can't decide
-	
+
 	SetTurnHinderance( "MouseGesture", 1.0f, TurnHinderance );
 }
 
@@ -6511,10 +6533,10 @@ void idPlayer::UpdateMouseGesture( void )
 			else
 				CurrentDir = MOUSEDIR_DOWN;
 
-			mag = idMath::Fabs( motion.y );			
+			mag = idMath::Fabs( motion.y );
 		}
 		// side/side dominant (default left for zero input)
-		else 
+		else
 		{
 			if( motion.x > 0 )
 				CurrentDir = MOUSEDIR_RIGHT;
@@ -6545,7 +6567,7 @@ void idPlayer::UpdateMouseGesture( void )
 		dirs.Append(idMath::Fabs(DiagVec.y));
 
 		mag = 0.0f;
-		int MaxAxis = -1; 
+		int MaxAxis = -1;
 
 		for( int i=0; i < 4; i++ )
 		{
@@ -6597,8 +6619,8 @@ void idPlayer::UpdateMouseGesture( void )
 
 
 	// If above threshold, decision timer ran out, or button released, we're done
-	if( mag > m_MouseGesture.thresh 
-		|| (m_MouseGesture.DecideTime >= 0 && (gameLocal.time - m_MouseGesture.started) > m_MouseGesture.DecideTime) 
+	if( mag > m_MouseGesture.thresh
+		|| (m_MouseGesture.DecideTime >= 0 && (gameLocal.time - m_MouseGesture.started) > m_MouseGesture.DecideTime)
 		|| !common->ButtonState(m_MouseGesture.key) )
 	{
 		m_MouseGesture.result = CurrentDir;
@@ -6644,13 +6666,13 @@ idPlayer::AdjustSpeed
 DarkMod Note: Wow... this was pretty badly written
 ==============
 */
-void idPlayer::AdjustSpeed( void ) 
+void idPlayer::AdjustSpeed( void )
 {
 	float speed(0.0f);
 	float crouchspeed(0.0f);
-	
+
 	const float fCurrentHinderance = GetHinderance();
-	float maxSpeedGlobal = 
+	float maxSpeedGlobal =
 		pm_walkspeed.GetFloat() * cv_pm_runmod.GetFloat() * fCurrentHinderance;
 
 	if ( spectating )
@@ -6664,13 +6686,13 @@ void idPlayer::AdjustSpeed( void )
 		{		// "run" noclip
 			speed = pm_noclipspeed.GetFloat() * cv_pm_runmod.GetFloat();
 			bobFrac = 0.0f;
-		} 
+		}
 		else if (m_CreepIntent)
 		{
 			// slow "creep" noclip
 			speed = pm_noclipspeed.GetFloat() * cv_pm_creepmod.GetFloat();
 			bobFrac = 0.0f;
-		} 
+		}
 		else
 		{
 			// "Walk" noclip
@@ -6680,7 +6702,7 @@ void idPlayer::AdjustSpeed( void )
 	}
 	// running case
 	// TDM: removed check for not crouching..
-	else if ( !physicsObj.OnLadder() && ( usercmd.buttons & BUTTON_RUN ) && ( usercmd.forwardmove || usercmd.rightmove ) ) 
+	else if ( !physicsObj.OnLadder() && ( usercmd.buttons & BUTTON_RUN ) && ( usercmd.forwardmove || usercmd.rightmove ) )
 	{
 		float walkSpeed = pm_walkspeed.GetFloat();
 
@@ -6703,10 +6725,10 @@ void idPlayer::AdjustSpeed( void )
 		// STiFU #1932: Apply hinderance not only to max speed but to all speeds.
 		if (cv_pm_softhinderance_active.GetBool())
 		{
-			speed *= (cv_pm_softhinderance_run.GetFloat() * fCurrentHinderance 
+			speed *= (cv_pm_softhinderance_run.GetFloat() * fCurrentHinderance
 				+ 1.0f - cv_pm_softhinderance_run.GetFloat());
 		}
-		
+
 		// ishtvan: we'll see if this works to prevent backwards running, depends on order things are set
 		// Don't apply backwards run penalty to crouch run.  It's already slow enough.
 		crouchspeed = speed * cv_pm_crouchmod.GetFloat();
@@ -6717,7 +6739,7 @@ void idPlayer::AdjustSpeed( void )
 
 		// Clamp to encumbrance limits:
 		speed = idMath::ClampFloat(0, maxSpeedGlobal, speed);
-		crouchspeed = idMath::ClampFloat(0, maxSpeedGlobal, crouchspeed);			
+		crouchspeed = idMath::ClampFloat(0, maxSpeedGlobal, crouchspeed);
 	}
 	else // standing still, walking, or creeping case
 	{
@@ -6728,14 +6750,14 @@ void idPlayer::AdjustSpeed( void )
 		if (m_CreepIntent)
 		{
 			speed *= cv_pm_creepmod.GetFloat();
-		}		
+		}
 
 		// STiFU #1932: Apply hinderance not only to max speed but to all speeds.
 		if (cv_pm_softhinderance_active.GetBool())
 		{
 			if (m_CreepIntent)
 			{
-				speed *= (cv_pm_softhinderance_creep.GetFloat() * fCurrentHinderance 
+				speed *= (cv_pm_softhinderance_creep.GetFloat() * fCurrentHinderance
 					+ 1.0f - cv_pm_softhinderance_creep.GetFloat());
 			}
 			else
@@ -6884,7 +6906,7 @@ void idPlayer::InitAASLocation( void ) {
 
 	num = gameLocal.NumAAS();
 	aasLocation.SetGranularity( 1 );
-	aasLocation.SetNum( num );	
+	aasLocation.SetNum( num );
 	for( i = 0; i < aasLocation.Num(); i++ ) {
 		aasLocation[ i ].areaNum = 0;
 		aasLocation[ i ].pos = origin;
@@ -6916,7 +6938,7 @@ void idPlayer::SetAASLocation( void ) {
 	if ( !GetFloorPos( 64.0f, origin ) ) {
 		return;
 	}
-	
+
 	for( i = 0; i < aasLocation.Num(); i++ ) {
 		aas = gameLocal.GetAAS( i );
 		if ( !aas ) {
@@ -6963,7 +6985,7 @@ void idPlayer::GetAASLocation( idAAS *aas, idVec3 &pos, int &areaNum ) const {
 idPlayer::Move
 ==============
 */
-void idPlayer::Move( void ) 
+void idPlayer::Move( void )
 {
 	float newEyeOffset;
 	idVec3 savedOrigin;
@@ -7009,7 +7031,7 @@ void idPlayer::Move( void )
 	}
 
 	physicsObj.SetDebugLevel( g_debugMove.GetBool() );
-	physicsObj.SetPlayerInput( usercmd, viewAngles );
+	physicsObj.SetPlayerInput( usercmd, viewAngles, actualViewAngles );
 
 	// FIXME: physics gets disabled somehow
 	BecomeActive( TH_PHYSICS );
@@ -7062,7 +7084,7 @@ void idPlayer::Move( void )
 			// smoothing takes a constant amount of frames (and a constant minimum time if com_fixedTic == 0)
 			// SetEyeHeight( EyeHeight() * pm_crouchrate.GetFloat() + newEyeOffset * ( 1.0f - pm_crouchrate.GetFloat() ) );
 
-			// smoothing in a constant duration 
+			// smoothing in a constant duration
 			// multiply the crouchrate by a frametime factor (frametime 1/30 => 2, 1/60 => 1, 1/120 => 0.5, ...)
 			float crouchrate = (1.0f - pm_crouchrate.GetFloat()) * (1.0f * gameLocal.getMsec()) / USERCMD_MSEC;
 			SetEyeHeight(EyeHeight() * (1 - crouchrate) + newEyeOffset * crouchrate);
@@ -7084,8 +7106,8 @@ void idPlayer::Move( void )
 
 		// check if we're standing on top of a monster and give a push if we are
 		idEntity *groundEnt = physicsObj.GetGroundEntity();
-		if 
-		(	
+		if
+		(
 			groundEnt && groundEnt->IsType( idAI::Type )
 			&& groundEnt->health > 0
 			&& static_cast<idAI *>(groundEnt)->m_bPushOffPlayer
@@ -7104,7 +7126,7 @@ void idPlayer::Move( void )
 		}
 	}
 
-	if ( AI_JUMP ) 
+	if ( AI_JUMP )
 	{
 		// bounce the view weapon
  		loggedAccel_t	*acc = &loggedAccel[currentLoggedAccel&(NUM_LOGGED_ACCELS-1)];
@@ -7119,16 +7141,16 @@ void idPlayer::Move( void )
 	{
 		// nbohr1more: #4852 prevent flickering lantern on ropes and ladders
 		SetAnimState(ANIMCHANNEL_LEGS, "Legs_Idle", 4);
-		
+
 		// Correct for moving reference frame
 		int startTime = gameLocal.previousTime;
 		int endTime = gameLocal.time;
 		float refZOffset = MS2SEC(endTime - startTime) * physicsObj.GetRefEntVel().z;
-		
+
 		int old_vert = static_cast<int>(savedOrigin.z / cv_pm_rope_snd_rep_dist.GetInteger());
 		int new_vert = static_cast<int>((physicsObj.GetOrigin().z - refZOffset) / cv_pm_rope_snd_rep_dist.GetInteger());
-		
-		if (old_vert != new_vert) 
+
+		if (old_vert != new_vert)
 		{
 			// greebo: Get the rope entity and read the material/sound type from its spawnargs
 			idEntity* rope = physicsObj.GetRopeEntity();
@@ -7153,19 +7175,19 @@ void idPlayer::Move( void )
 				}
 
 				// Start the sound using the temporary key
-				StartSound(tempKey, SND_CHANNEL_ANY, 0, false, NULL);	
+				StartSound(tempKey, SND_CHANNEL_ANY, 0, false, NULL);
 			}
 			else
 			{
 				// No rope entity?! Fall back to player default
-				StartSound("snd_rope_climb", SND_CHANNEL_ANY, 0, false, NULL); 
+				StartSound("snd_rope_climb", SND_CHANNEL_ANY, 0, false, NULL);
 			}
 		}
 	}
 	// play climbing movement sounds
-	else if (AI_ONLADDER) 
+	else if (AI_ONLADDER)
 	{
-		
+
 		// nbohr1more: #4852 prevent flickering lantern on ropes and ladders
 		SetAnimState(ANIMCHANNEL_LEGS, "Legs_Idle", 4);
 
@@ -7244,7 +7266,7 @@ void idPlayer::Move( void )
 					StartSound(tempStr.c_str(), SND_CHANNEL_BODY, 0, false, NULL); // grayman - #2341 - was SND_CHANNEL_ANY
 				}
 			}
-		}		
+		}
 	}
 	else if (physicsObj.m_bSlideInitialized)
 	{
@@ -7305,7 +7327,7 @@ void idPlayer::DynamicHudT::Update()
 				|| player->m_FrobEntity != lastFrobHighlightedEntity;
 			const bool evaluateUseOnFrobRelation = !wasUseOnFrobRelation ||
 				wasUseOnFrobRelation && useOnFrobEntitesChanged;
-			
+
 			bool isUseOnFrobRelation = wasUseOnFrobRelation;
 			if (evaluateUseOnFrobRelation)
 			{
@@ -7330,7 +7352,7 @@ void idPlayer::DynamicHudT::Update()
 		}
 
 		// #6677: dynamic HUD weaponInventory - DynHUD_WeaponRule4
-		if (cv_dynamicHUD_weaponInventory_showOnAmmoChange.GetBool() 
+		if (cv_dynamicHUD_weaponInventory_showOnAmmoChange.GetBool()
 			&& cv_dynamicHUD_weaponInventory.GetInteger() == DynamicHUD)
 		{
 			const CInventoryWeaponItemPtr weaponItem = player->GetCurrentWeaponItem();
@@ -7373,9 +7395,9 @@ void idPlayer::DynamicHudT::Update()
 
 		player->m_overlays.setGlobalStateBool("dynamic_HUD", true);
 		player->m_overlays.setGlobalStateFloat("Weapon_HUD_Opacity", GetAlpha(weaponInventory, cv_dynamicHUD_weaponInventory.GetInteger()));
-		player->m_overlays.setGlobalStateBool("Weapon_HUD_showName", cv_dynamicHUD_weaponInventory_showName.GetBool());		
+		player->m_overlays.setGlobalStateBool("Weapon_HUD_showName", cv_dynamicHUD_weaponInventory_showName.GetBool());
 		player->m_overlays.setGlobalStateFloat("Item_HUD_Opacity", GetAlpha(itemInventory, cv_dynamicHUD_itemInventory.GetInteger()));
-		player->m_overlays.setGlobalStateBool("Item_HUD_showName", cv_dynamicHUD_itemInventory_showName.GetBool());		
+		player->m_overlays.setGlobalStateBool("Item_HUD_showName", cv_dynamicHUD_itemInventory_showName.GetBool());
 		player->m_overlays.setGlobalStateFloat("Health_HUD_Opacity", GetAlpha(healthBar, cv_dynamicHUD_healthBar.GetInteger()));
 	}
 
@@ -7397,29 +7419,29 @@ void idPlayer::DynamicHudT::Update()
 				cv_frobhelper_fadeout_duration.ClearModified();
 				const HudFader::FadeParams fadeIn{ cv_frobhelper_fadein_delay.GetInteger(), cv_frobhelper_fadein_duration.GetInteger()};
 				const HudFader::FadeParams fadeOut{ 0, cv_frobhelper_fadeout_duration.GetInteger() };
-				frobHelper.UpdateParams(fadeIn, fadeOut);
+				m_FrobHelper.UpdateParams(fadeIn, fadeOut);
 			}
 
-			if (frobHelper.ShouldBeShown())
+			if (m_FrobHelper.ShouldBeShown())
 			{
 				if (player->AI_DEAD || player->m_bGrabberActive)
 				{
-					frobHelper.HideInstantly(); // #4906: DynHud_FrobHelperRule1
-				}				
+					m_FrobHelper.HideInstantly(); // #4906: DynHud_FrobHelperRule1
+				}
 				else if (player->m_FrobEntity == NULLPTR)
 				{
-					frobHelper.Hide(); // #4906: DynHud_FrobHelperRule1
+					m_FrobHelper.Hide(); // #4906: DynHud_FrobHelperRule1
 				}
 			}
 			else
 			{
 				if (lastFrobHighlightedEntity == NULLPTR && player->m_FrobEntity != NULLPTR)
 				{
-					frobHelper.Show(); // #4906: DynHud_FrobHelperRule1
+					m_FrobHelper.Show(); // #4906: DynHud_FrobHelperRule1
 				}
 			}
-			
-			player->cursor->SetStateFloat("FrobHelper_Opacity", maxAlpha * frobHelper.GetAlpha());
+
+			player->cursor->SetStateFloat("FrobHelper_Opacity", maxAlpha * m_FrobHelper.GetAlpha());
 			player->cursor->SetStateFloat("FrobHelper_Size", cv_frobhelper_size.GetInteger());
 		}
 	}
@@ -7430,11 +7452,11 @@ void idPlayer::DynamicHudT::Update()
 
 void idPlayer::DynamicHudT::Reset()
 {
-	frobHelper.Reset();
+	m_FrobHelper.Reset();
 	{
 		const HudFader::FadeParams fadeIn{ cv_frobhelper_fadein_delay.GetInteger(), cv_frobhelper_fadein_duration.GetInteger() };
 		const HudFader::FadeParams fadeOut{ 0, cv_frobhelper_fadeout_duration.GetInteger() };
-		frobHelper.UpdateParams(fadeIn, fadeOut);
+		m_FrobHelper.UpdateParams(fadeIn, fadeOut);
 	}
 
 	weaponInventory.Reset();
@@ -7471,7 +7493,7 @@ idPlayer::UpdateHUD
 void idPlayer::UpdateHUD()
 {
 	if (hud == NULL) return;
-	
+
 	if ( entityNumber != gameLocal.localClientNum ) {
 		return;
 	}
@@ -7517,11 +7539,11 @@ void idPlayer::UpdateInventoryHUD()
 
 	idEntity* curItemEnt = curItem->GetItemEntity();
 
-	if (curItemEnt != NULL) 
+	if (curItemEnt != NULL)
 	{
 		// Call the item's update routine for the update
 		idThread* thread = curItemEnt->CallScriptFunctionArgs(
-			"inventory_item_update", true, 0, 
+			"inventory_item_update", true, 0,
 			"eef", curItemEnt, curItem->GetOwner(), static_cast<float>(curItem->GetOverlay())
 		);
 
@@ -7581,7 +7603,7 @@ void idPlayer::UpdateInventoryHUD()
 			SetGuiInt(m_InventoryOverlay, "Inventory_GroupVisible", 0);
 		}
 		break;
-		
+
 		default: break;
 	}
 
@@ -7607,7 +7629,7 @@ void idPlayer::UpdateHUDMessages()
 
 	if (hasMessage == 1) {
 		// The HUD is still busy, leave it for the moment being
-		return; 
+		return;
 	}
 
 	// greebo: We have a message and the HUD is ready, shove it into the GUI.
@@ -7626,13 +7648,13 @@ void idPlayer::UpdateInventoryPickedUpMessages()
 
 	idUserInterface* invGUI = m_overlays.getGui(m_InventoryOverlay);
 
-	if (invGUI == NULL) 
+	if (invGUI == NULL)
 	{
 		DM_LOG(LC_INVENTORY, LT_ERROR)LOGSTRING("Could not find inventory HUD, cannot update pickup messages.\r");
 		return; // no overlay?
 	}
 
-	/* 
+	/*
 	greebo: Commented this out to let new pickup messages overwrite the old ones.
 	Put this back in to let the GUI display one message after the other.
 
@@ -7641,7 +7663,7 @@ void idPlayer::UpdateInventoryPickedUpMessages()
 	if (hasMessage == 1)
 	{
 		// The HUD is still busy, leave it for the moment being
-		return; 
+		return;
 	}*/
 
 	// greebo: We have a message and the HUD is ready, shove it into the GUI.
@@ -7736,7 +7758,7 @@ void idPlayer::UpdateUnderWaterEffects()
 			}
 			else
 			{
-				underWaterGUIHandle = CreateOverlay(overlay.c_str(), LAYER_UNDERWATER);
+				// underWaterGUIHandle = CreateOverlay(overlay.c_str(), LAYER_UNDERWATER); // VR
 			}
 			underWaterEffectsActive = true;
 		}
@@ -7816,7 +7838,7 @@ void idPlayer::Think( void )
 
 	// clear the ik before we do anything else so the skeleton doesn't get updated twice
 	walkIK.ClearJointMods();
-	
+
 	// if this is the very first frame of the map, set the delta view angles
 	// based on the usercmd angles
 	if ( !spawnAnglesSet && ( gameLocal.GameState() != GAMESTATE_STARTUP ) ) {
@@ -7922,7 +7944,7 @@ void idPlayer::Think( void )
 		// update GUIs, Items, and character interactions
 		UpdateFocus();
 #endif
-		
+
 		UpdateLocation();
 
 		// update player script
@@ -7982,7 +8004,7 @@ void idPlayer::Think( void )
 
 	// greebo: update underwater overlay and sounds
 	UpdateUnderWaterEffects();
-	
+
 	UpdateHUD();
 
 	UpdatePowerUps();
@@ -8031,7 +8053,7 @@ void idPlayer::Think( void )
 
 		playerView.CalculateShake();
 	}
-	
+
 	if ( !( thinkFlags & TH_THINK ) ) {
 		gameLocal.Printf( "player %d not thinking?\n", entityNumber );
 	}
@@ -8065,7 +8087,7 @@ void idPlayer::Think( void )
 	{
 		//LAS.pvsToAASMappingTable.DebugShowMappings(10000);
 		idAASLocal* aas = dynamic_cast<idAASLocal*>(gameLocal.GetAAS(cv_debug_aastype.GetString()));
-					
+
 		if (aas != NULL)
 		{
 			aas->DrawAreas(GetEyePosition());
@@ -8097,12 +8119,21 @@ void idPlayer::RouteGuiMouse( idUserInterface *gui ) {
 		oldMouseX = usercmd.mx;
 		oldMouseY = usercmd.my;
 	}*/
-		
+
 	if ( usercmd.mx != oldMouseX || usercmd.my != oldMouseY ) {
 		ev = sys->GenerateMouseMoveEvent( usercmd.mx - oldMouseX, usercmd.my - oldMouseY );
 		command = gui->HandleEvent( &ev, gameLocal.time );
 		oldMouseX = usercmd.mx;
 		oldMouseY = usercmd.my;
+	}
+	if ( usercmd.jx != 0 || usercmd.jy != 0 ) {
+		extern idCVar in_padMouseSpeed;
+		float speed = in_padMouseSpeed.GetFloat() / 640.f * renderSystem->GetScreenWidth();
+		// hack: we want the original axis deflection, without inversed axes if enabled
+		int x, y;
+		Sys_GetCombinedAxisDeflection( x, y );
+		ev = sys->GenerateMouseMoveEvent( speed * x / 64.f, -speed * y / 64.f );
+		command = gui->HandleEvent( &ev, gameLocal.time );
 	}
 	if ( usercmd.jx != 0 || usercmd.jy != 0 ) {
 		extern idCVar in_padMouseSpeed;
@@ -8122,7 +8153,7 @@ idPlayer::LookAtKiller
 */
 void idPlayer::LookAtKiller( idEntity *inflictor, idEntity *attacker ) {
 	idVec3 dir;
-	
+
 	if ( attacker && attacker != this ) {
 		dir = attacker->GetPhysics()->GetOrigin() - GetPhysics()->GetOrigin();
 	} else if ( inflictor && inflictor != this ) {
@@ -8226,7 +8257,7 @@ void idPlayer::Killed( idEntity *inflictor, idEntity *attacker, int damage, cons
 	// Play the death sound on the voice channel
 	idStr deathSound = (physicsObj.GetWaterLevel() >= WATERLEVEL_HEAD) ? "snd_death_liquid" : "snd_death";
 	StartSound( deathSound, SND_CHANNEL_VOICE, 0, false, NULL );
-	
+
 	StopSound( SND_CHANNEL_BODY2, false );
 
 	fl.takedamage = true;		// can still be gibbed
@@ -8269,7 +8300,7 @@ void idPlayer::GetAIAimTargets( const idVec3 &lastSightPos, idVec3 &headPos, idV
 	idVec3 offset;
 	idMat3 axis;
 	idVec3 origin;
-	
+
 	origin = lastSightPos - physicsObj.GetOrigin();
 
 	GetJointWorldTransform( chestJoint, gameLocal.time, offset, axis );
@@ -8378,14 +8409,14 @@ inflictor, attacker, dir, and point can be NULL for environmental effects
 ============
 */
 void idPlayer::Damage( idEntity *inflictor, idEntity *attacker, const idVec3 &dir,
-					   const char *damageDefName, const float damageScale, const int location, 
-					   trace_t *collision ) 
+					   const char *damageDefName, const float damageScale, const int location,
+					   trace_t *collision )
 {
 	idVec3		kick;
 	int			damage;
 	int			knockback;
 	idVec3		damage_from;
-	idVec3		localDamageVector;	
+	idVec3		localDamageVector;
 	float		attackerPushScale;
 
 	if ( !fl.takedamage || noclip || spectating || gameLocal.inCinematic ) {
@@ -8437,20 +8468,20 @@ void idPlayer::Damage( idEntity *inflictor, idEntity *attacker, const idVec3 &di
 		physicsObj.SetKnockBack( idMath::ClampInt( 50, 200, knockback * 2 ) );
 	}
 
-	if ( damageDef->dict.GetBool( "burn" ) ) 
+	if ( damageDef->dict.GetBool( "burn" ) )
 	{
 		StartSound( "snd_burn", SND_CHANNEL_BODY3, 0, false, NULL );
 	}
 
 	if ( g_debugDamage.GetInteger() ) {
-		gameLocal.Printf( "client:%i health:%i damage:%i\n", 
+		gameLocal.Printf( "client:%i health:%i damage:%i\n",
 			entityNumber, health, damage );
 	}
 
 	// move the world direction vector to local coordinates
 	damage_from = dir;
 	damage_from.Normalize();
-	
+
 	viewAxis.ProjectVector( damage_from, localDamageVector );
 
 	// add to the damage inflicted on a player this frame
@@ -8463,17 +8494,17 @@ void idPlayer::Damage( idEntity *inflictor, idEntity *attacker, const idVec3 &di
 	}
 
 	// do the damage
-	if ( damage > 0 ) 
+	if ( damage > 0 )
 	{
 		{
 			float scale = g_damageScale.GetFloat();
-			if ( scale > 0.0f ) 
+			if ( scale > 0.0f )
 			{
 				damage *= scale;
 			}
 		}
 
-		if ( damage < 1 ) 
+		if ( damage < 1 )
 		{
 			damage = 1;
 		}
@@ -8481,7 +8512,7 @@ void idPlayer::Damage( idEntity *inflictor, idEntity *attacker, const idVec3 &di
 //		int oldHealth = health;
 		health -= damage;
 
-		m_dynamicHUD.healthBar.Show(true); // #6677: DynHUD_HealthRule1		
+		m_dynamicHUD.healthBar.Show(true); // #6677: DynHUD_HealthRule1
 
 		// greebo: Update mission statistics, we've taken damage
 		gameLocal.m_MissionData->PlayerDamaged(damage);
@@ -8493,9 +8524,9 @@ void idPlayer::Damage( idEntity *inflictor, idEntity *attacker, const idVec3 &di
 			m_bDamagedThisFrame = true;
 		}
 
-		if ( health <= 0 ) 
+		if ( health <= 0 )
 		{
-			if ( health < -999 ) 
+			if ( health < -999 )
 			{
 				health = -999;
 			}
@@ -8504,37 +8535,37 @@ void idPlayer::Damage( idEntity *inflictor, idEntity *attacker, const idVec3 &di
 			Killed( inflictor, attacker, damage, dir, location );
 
 		}
-		else 
+		else
 		{
 			// force a blink
 			blink_time = 0;
 
-			if (!damageDef->dict.GetBool( "no_pain" )) 
+			if (!damageDef->dict.GetBool( "no_pain" ))
 			{
 				// let the anim script know we took damage
 				AI_PAIN = Pain( inflictor, attacker, damage, dir, location, &damageDef->dict );
 			}
-			
+
 			// FIX: if drowning, stop pain SFX and play drown SFX on voice channel
-			if ( damageDef->dict.GetBool( "no_air" ) ) 
+			if ( damageDef->dict.GetBool( "no_air" ) )
 			{
-				if ( health > 0 ) 
+				if ( health > 0 )
 				{
 					StopSound( SND_CHANNEL_VOICE, false );
 					StartSound( "snd_airGasp", SND_CHANNEL_VOICE, 0, false, NULL );
 				}
 			}
 
-			if ( !g_testDeath.GetBool() ) 
+			if ( !g_testDeath.GetBool() )
 			{
 				lastDmgTime = gameLocal.time;
 			}
 		}
 	}
-	else 
+	else
 	{
 		// don't accumulate impulses
-		if ( af.IsLoaded() ) 
+		if ( af.IsLoaded() )
 		{
 			// clear impacts
 			af.Rest();
@@ -8907,7 +8938,7 @@ idPlayer::GetEyePosition
 idVec3 idPlayer::GetEyePosition( void ) const
 {
 	idVec3 org;
- 
+
 	// use the smoothed origin if spectating another player in multiplayer
 	{
 		org = GetPhysics()->GetOrigin();
@@ -8935,7 +8966,7 @@ idVec3 idPlayer::GetEyePosition( void ) const
 idPlayer::GetViewPos
 ===============
 */
-void idPlayer::GetViewPos( idVec3 &origin, idMat3 &axis ) const {
+void idPlayer::GetViewPos( idVec3 &origin, idMat3 &axis, bool decoupledAngles ) const {
 	idAngles angles;
 
 	if ( usePeekView ) // grayman #4882
@@ -8955,11 +8986,49 @@ void idPlayer::GetViewPos( idVec3 &origin, idMat3 &axis ) const {
 		origin = GetEyePosition() + viewBob;
 		angles = viewAngles + viewBobAngles + physicsObj.GetViewLeanAngles() + playerView.AngleOffset();
 
+		if ( decoupledAngles && !vr_useMotionControllers.GetBool() ) {
+			// in VR, mouse pitch and roll added to the view is confusing, so leave it out
+			actualViewAngles.pitch = 0;
+			actualViewAngles.roll = 0;
+
+			// figure out yaw adjustment:
+			// we want the player to be able to move the mouse horizontally within a certain corridor
+			// before affecting the view to have an easier time selecting and aiming with the mouse without
+			// triggering a lot of short and jittery, motion-inducing rotation on the player view
+			if ( angles.yaw - actualViewAngles.yaw > 180 ) {
+				actualViewAngles.yaw += 360;
+			} else if ( angles.yaw - actualViewAngles.yaw < -180 ) {
+				actualViewAngles.yaw -= 360;
+			}
+			float yawDiff = angles.yaw - actualViewAngles.yaw;
+			float maxYawDiff = vr_decoupledMouseYawAngle.GetFloat();
+			if ( idMath::Fabs( yawDiff ) >= maxYawDiff ) {
+				actualViewAngles.yaw = angles.yaw - idMath::ClampFloat( -maxYawDiff, maxYawDiff, yawDiff );
+			}
+
+			angles = actualViewAngles;
+		}
+		if (decoupledAngles && vr_useMotionControllers.GetBool()) {
+			angles = actualViewAngles;
+		}
+
 		axis = angles.ToMat3() * physicsObj.GetGravityAxis();
 
 		// adjust the origin based on the camera nodal distance (eye distance from neck)
 		origin += physicsObj.GetGravityNormal() * g_viewNodalZ.GetFloat();
 		origin += axis[0] * g_viewNodalX.GetFloat() + axis[2] * g_viewNodalZ.GetFloat();
+
+		frameData->cameraPosition = origin;
+		frameData->cameraAngles = angles;
+	}
+}
+
+void idPlayer::GetFrobPos( idVec3 &origin, idMat3 &axis ) const {
+	if ( vr_useMotionControllers.GetBool() ) {
+		origin = GetEyePosition() + usercmd.frobPos * actualViewAngles.ToMat3();
+		axis = ( usercmd.frobAxis * actualViewAngles.ToQuat() ).ToMat3();
+	} else {
+		GetViewPos( origin, axis );
 	}
 }
 
@@ -9092,6 +9161,7 @@ void idPlayer::CalculateRenderView( void ) {
 
 	// check if we should be drawing from a camera's POV
 	if ( !noclip && (gameLocal.GetCamera() || privateCameraView) ) {
+		frameData->render2D = true;
 		// get origin, axis, and fov
 		if ( privateCameraView ) {
 			privateCameraView->GetViewParms( renderView );
@@ -9099,6 +9169,8 @@ void idPlayer::CalculateRenderView( void ) {
 			gameLocal.GetCamera()->GetViewParms( renderView );
 		}
 	} else {
+		bool spyglassInUse = m_immobilization.GetInt( "spyglass" ) != 0;
+		frameData->render2D = vr_force2DRender.GetInteger() == 2 || spyglassInUse;
 		if ( g_stopTime.GetBool() ) {
 			renderView->vieworg = firstPersonViewOrigin;
 			renderView->viewaxis = firstPersonViewAxis;
@@ -9116,11 +9188,13 @@ void idPlayer::CalculateRenderView( void ) {
 			renderView->vieworg = firstPersonViewOrigin;
 			renderView->viewaxis = firstPersonViewAxis;
 
+			GetViewPos( renderView->vieworg, renderView->viewaxis, vr_decoupleMouseMovement.GetBool() && !spyglassInUse );
+
 			// set the viewID to the clientNum + 1, so we can suppress the right player bodies and
 			// allow the right player view weapons
 			renderView->viewID = VID_PLAYER_VIEW;// entityNumber + 1;
 		}
-		
+
 		// field of view
 		gameLocal.CalcFov( CalcFov( true ), renderView->fov_x, renderView->fov_y );
 	}
@@ -9393,7 +9467,7 @@ bool idPlayer::OnLadder( void ) const {
 	return physicsObj.OnLadder();
 }
 
-CMultiStateMover* idPlayer::OnElevator(bool mustBeMoving) const 
+CMultiStateMover* idPlayer::OnElevator(bool mustBeMoving) const
 {
 	idEntity* ent = physicsObj.GetGroundEntity();
 
@@ -9486,17 +9560,17 @@ void idPlayer::Event_StopFxFov( void ) {
 
 /*
 ==================
-idPlayer::StartFxFov 
+idPlayer::StartFxFov
 ==================
 */
-void idPlayer::StartFxFov( float duration ) { 
+void idPlayer::StartFxFov( float duration ) {
 	fxFov = true;
 	PostEventSec( &EV_Player_StopFxFov, duration );
 }
 
 /*
 ==================
-idPlayer::Event_EnableWeapon 
+idPlayer::Event_EnableWeapon
 ==================
 */
 void idPlayer::Event_EnableWeapon( void ) {
@@ -9651,7 +9725,7 @@ void idPlayer::ClientPredictionThink( void ) {
 
 	usercmd = gameLocal.usercmds;
 
-	if ( entityNumber != gameLocal.localClientNum ) 
+	if ( entityNumber != gameLocal.localClientNum )
 	{
 		// ignore attack button of other clients. that's no good for predictions
 
@@ -9700,7 +9774,7 @@ void idPlayer::ClientPredictionThink( void ) {
 	if ( !isLagged ) {
 		// don't allow client to move when lagged
 		Move();
-	} 
+	}
 
 	// service animations
 	if ( !spectating && !af.IsActive() ) {
@@ -10082,7 +10156,7 @@ idPlayer::Show
 */
 void idPlayer::Show( void ) {
 	idWeapon *weap;
-	
+
 	idActor::Show();
 	weap = weapon.GetEntity();
 	if ( weap ) {
@@ -10150,7 +10224,7 @@ void idPlayer::Event_Gibbed( void ) {
 
 /*
 ==================
-idPlayer::Event_GetIdealWeapon 
+idPlayer::Event_GetIdealWeapon
 ==================
 */
 void idPlayer::Event_GetIdealWeapon( void ) {
@@ -10173,7 +10247,7 @@ int idPlayer::ProcessLightgem(bool processing)
 	// nbohr1more #4369 Dynamic Lightgem Interleave - determine if we should draw lightgem this frame
 	static int previousTime, previousTimes[FPS_FRAMES];
 
-	// determine current fps rate	
+	// determine current fps rate
 	int currentTime = gameLocal.time;
 	int frameTime = currentTime - previousTime;
 	previousTime = currentTime;
@@ -10184,7 +10258,7 @@ int idPlayer::ProcessLightgem(bool processing)
 	previousTimes[FPS_FRAMES - 1] = frameTime;
 	int total = std::accumulate( previousTimes, previousTimes + FPS_FRAMES, 1 ) + previousTimes[FPS_FRAMES - 2] + 2 * previousTimes[FPS_FRAMES - 1];
 	int averageFps  = (1000 * (FPS_FRAMES + 3) ) / total;
-	
+
 	int minInterleaveFps = Max( 1, cv_lg_interleave_min.GetInteger() );
 	int interleaveFrames = ( averageFps >= minInterleaveFps ) ? cv_lg_interleave.GetInteger() : 1;
 
@@ -10252,10 +10326,10 @@ float idPlayer::CalculateWeakLightgem()
 
 		idVec3 vPlayer = vPlayerPos;
 		vPlayer.z = vLight.z;
-		
+
 		idVec3 vDifference = vPlayer - vLight;
 		double distance = vDifference.LengthFast();
-		DM_LOG(LC_LIGHT, LT_DEBUG)LOGSTRING("Ligth: [%s]  %i  px: %f   py: %f   pz: %f   -   lx: %f   ly: %f   lz: %f   Distance: %f\r", 
+		DM_LOG(LC_LIGHT, LT_DEBUG)LOGSTRING("Light: [%s]  %i  px: %f   py: %f   pz: %f   -   lx: %f   ly: %f   lz: %f   Distance: %f\r",
 			light->name.c_str(), i, vPlayer.x, vPlayer.y, vPlayer.z, vLight.x, vLight.y, vLight.z, distance);
 
 		// Fast and cheap test to see if the player could be in the area of the light.
@@ -10574,7 +10648,7 @@ bool idPlayer::UseInventoryItem(EImpulseState impulseState, const CInventoryItem
 	idEntity* highlightedEntity = m_FrobEntity.GetEntity();
 
 	bool itemIsUsable = ent->spawnArgs.GetBool("usable");
-	
+
 	if ( (highlightedEntity != NULL) && itemIsUsable && highlightedEntity->CanBeUsedByItem(item, isFrobUse))
 	{
 		// Pass the use call
@@ -10589,7 +10663,7 @@ bool idPlayer::UseInventoryItem(EImpulseState impulseState, const CInventoryItem
 
 		// Get the name of this inventory category
 		const idStr& categoryName = item->Category()->GetName();
-	
+
 		if ( categoryName == "#str_02392" ) // Keys
 		{
 			return false;
@@ -10636,7 +10710,7 @@ void idPlayer::DropInventoryItem()
 	{
 		grabber->Update( this, false );
 	}
-	else 
+	else
 	{
 		// Grabber is empty (no item is held), drop the current inventory item
 		const CInventoryCursorPtr& cursor = InventoryCursor();
@@ -10653,7 +10727,7 @@ void idPlayer::DropInventoryItem()
 
 			// greebo: Try to locate a drop script function on the entity's scriptobject
 			const function_t* dropScript = ent->scriptObject.GetFunction(TDM_INVENTORY_DROPSCRIPT);
-			
+
 			if( dropScript != NULL )
 			{
 				// Call the custom drop script
@@ -10661,8 +10735,8 @@ void idPlayer::DropInventoryItem()
 				idThread* thread = new idThread(dropScript);
 				thread->CallFunctionArgs(dropScript, true, "ee", ent, this);
 				thread->DelayedStart(0);
-				
-				// The dropScript changes the inventory count itself, so don't set 
+
+				// The dropScript changes the inventory count itself, so don't set
 				// bDropped to true here.
 			}
 			// greebo: Only place the entity in the world, if there is no custom dropscript
@@ -10685,7 +10759,7 @@ void idPlayer::DropInventoryItem()
 			{
 				DM_LOG(LC_INVENTORY, LT_INFO)LOGSTRING("Item dropped, changing inventory count.\r");
 
-				ChangeInventoryItemCount(item->GetName(), category->GetName(), -1); 
+				ChangeInventoryItemCount(item->GetName(), category->GetName(), -1);
 			}
 
 			// Always update the HUD, the drop script might have changed the inventory count itself.
@@ -10716,7 +10790,7 @@ bool idPlayer::SelectInventoryItem(const idStr& name)
 			m_LastItemNameBeforeClear = TDM_DUMMY_ITEM;
 		}
 	}
-	
+
 	// Try to lookup the item in the inventory
 	CInventoryItemPtr item = Inventory()->GetItem(itemName);
 
@@ -10725,7 +10799,7 @@ bool idPlayer::SelectInventoryItem(const idStr& name)
 		// Item found, set the cursor to it
 		InventoryCursor()->SetCurrentItem(item);
 
-		m_dynamicHUD.itemInventory.Show(true); // #6677: DynHUD_ItemRule1		
+		m_dynamicHUD.itemInventory.Show(true); // #6677: DynHUD_ItemRule1
 
 		// Trigger an update, passing the previous item along
 		OnInventorySelectionChanged(prev);
@@ -10771,12 +10845,12 @@ void idPlayer::OnInventorySelectionChanged(const CInventoryItemPtr& prevItem)
 		if (prevItemEnt != NULL)
 		{
 			idThread* thread = prevItemEnt->CallScriptFunctionArgs(
-				"inventory_item_unselect", 
-				true, 0, 
+				"inventory_item_unselect",
+				true, 0,
 				"eef", prevItemEnt, prevItem->GetOwner(), static_cast<float>(prevItem->GetOverlay())
 			);
 
-			if (thread != NULL) 
+			if (thread != NULL)
 			{
 				thread->Execute();
 			}
@@ -10795,12 +10869,12 @@ void idPlayer::OnInventorySelectionChanged(const CInventoryItemPtr& prevItem)
 		if (curItemEnt != NULL)
 		{
 			idThread* thread = curItemEnt->CallScriptFunctionArgs(
-				"inventory_item_select", 
-				true, 0, 
+				"inventory_item_select",
+				true, 0,
 				"eef", curItemEnt, curItem->GetOwner(), static_cast<float>(curItem->GetOverlay())
 			);
 
-			if (thread != NULL) 
+			if (thread != NULL)
 			{
 				thread->Execute();
 			}
@@ -10872,7 +10946,7 @@ bool idPlayer::DropToHands( idEntity *ent, CInventoryItemPtr item )
 	}
 
 	// STiFU #4107: Try to drop entity in multiple angles away from the player
-	float fDropAngle = 0.0f;	
+	float fDropAngle = 0.0f;
 	while (fDropAngle <= cv_pm_shoulderDrop_maxAngle.GetFloat())
 	{
 		for (int iAngleSign = 1; iAngleSign > -2; iAngleSign -= 2)
@@ -10889,7 +10963,7 @@ bool idPlayer::DropToHands( idEntity *ent, CInventoryItemPtr item )
 			// NOTE: TestDropItemRotations will overwrite DropAxis if the supplied doesn't work and it finds a working one
 			if (TestDropItemRotations(ent, playViewPos, dropPoint, dropAxis))
 			{
-				// Drop the item into the grabber hands 
+				// Drop the item into the grabber hands
 				DM_LOG(LC_INVENTORY, LT_INFO)LOGSTRING("Item fits in hands.\r");
 
 				// Stackable items only have one "real" entity for the whole item stack.
@@ -10934,7 +11008,7 @@ bool idPlayer::DropToHands( idEntity *ent, CInventoryItemPtr item )
 				break;
 		}
 
-		// Increment of angle is at least one, so it is ensured that this is not 
+		// Increment of angle is at least one, so it is ensured that this is not
 		// an infinite loop
 		fDropAngle += cv_pm_shoulderDrop_angleIncrement.GetFloat();
 	}
@@ -11346,6 +11420,9 @@ void idPlayer::Event_WasDamaged( void )
 
 void idPlayer::Event_StartZoom(float duration, float startFOV, float endFOV)
 {
+	if ( vr_disableZoomAnimations.GetBool() ) {
+		startFOV = endFOV;
+	}
 	// greebo: Start the new transition from startFOV >> endFOV, this enables the idInterpolate
 	zoomFov.Init(gameLocal.time, duration, startFOV, endFOV);
 }
@@ -11354,6 +11431,10 @@ void idPlayer::Event_EndZoom(float duration)
 {
 	// greebo: Make a transition from the current FOV back to the default FOV, this enables the idInterpolate
 	zoomFov.Init(gameLocal.time, duration, zoomFov.GetCurrentValue(gameLocal.time), DefaultFov());
+
+	if ( vr_disableZoomAnimations.GetBool() ) {
+		zoomFov.SetStartValue( DefaultFov() );
+	}
 }
 
 void idPlayer::Event_ResetZoom()
@@ -11376,8 +11457,7 @@ void idPlayer::PerformFrobCheck()
 	PerformFrobCheckInternal();
 
 	idEntity *newFrobbed = m_FrobEntity.GetEntity();
-	if (newFrobbed != oldFrobbed) 
-	{
+	if (newFrobbed != oldFrobbed) {
 		if (oldFrobbed)
 			oldFrobbed->SetFrobbed(false);
 		if (newFrobbed)
@@ -11387,33 +11467,55 @@ void idPlayer::PerformFrobCheck()
 
 void idPlayer::PerformFrobCheckInternal()
 {
+	const bool bFrobHelperActive = m_FrobHelper.IsActive();
+
 	// greebo: Don't run this when dead
 	if (AI_DEAD)
 	{
+		if (bFrobHelperActive)
+			m_FrobHelper.HideInstantly();
 		return;
 	}
 
 	// greebo: Don't run the frobcheck when we're dragging items around
-	if (m_bGrabberActive)
-	{
-		return;
-	}
+	// if (m_bGrabberActive)
+	// {
+	//	if (bFrobHelperActive)
+	//		m_FrobHelper.Hide();
+	// 	return;
+	// }
 
 	// ishtvan: Don't run if frob hilighting is disabled
 	// TODO: Should we just add this functionality to EIM_FROB and get rid of EIM_FROBHILIGHT?
 	if ( GetImmobilization() & EIM_FROB_HILIGHT )
 	{
+		// m_FrobEntity = NULL;
+		// if (bFrobHelperActive)
+			// m_FrobHelper.HideInstantly();
 		return;
-	}	
+	}
 
 	idVec3 eyePos = GetEyePosition();
 	float maxFrobDistance = g_Global.m_MaxFrobDistance;
+
+	frameData->mouseAimSize = vr_aimIndicatorSize.GetFloat();
+	bool isUsingBow = weapon.GetEntity() && weapon.GetEntity()->IsRanged();// && m_immobilization.GetInt( "arrow_weapon" ) != 0;
+	if ( isUsingBow ) {
+		// VR: allow aim indicator to reach further for better ranged aim
+		maxFrobDistance *= vr_aimIndicatorRangedMultiplier.GetFloat();
+		frameData->mouseAimSize = vr_aimIndicatorRangedSize.GetFloat();
+	}
 
 	// greebo: Let the currently selected inventory item affect the frob distance (lockpicks, for instance)
 	CInventoryItemPtr curItem = InventoryCursor()->GetCurrentItem();
 
 	idVec3 start = eyePos;
-	idVec3 end = start + viewAngles.ToForward() * maxFrobDistance;
+	idAngles angles = viewAngles;
+	if ( vr_useMotionControllers.GetBool() ) {
+		start = eyePos + usercmd.frobPos * actualViewAngles.ToMat3();
+		angles = ( usercmd.frobAxis * actualViewAngles.ToQuat() ).ToAngles();
+	}
+	idVec3 end = start + angles.ToForward() * maxFrobDistance;
 
 	// Do frob trace first, along view axis, record distance traveled
 	// Frob collision mask:
@@ -11422,8 +11524,17 @@ void idPlayer::PerformFrobCheckInternal()
 
 	trace_t trace;
 	gameLocal.clip.TracePoint(trace, start, end, cm, this);
-	
-	float traceDist = g_Global.m_MaxFrobDistance * trace.fraction;
+
+	float traceDist = maxFrobDistance * trace.fraction;
+	frobAimIndicatorPos = start + angles.ToForward() * traceDist;
+	frameData->mouseAimPosition = frobAimIndicatorPos;
+
+	if (m_bGrabberActive)
+	{
+		if (bFrobHelperActive)
+			m_FrobHelper.Hide();
+		return;
+	}
 
 	if ( trace.fraction < 1.0f )
 	{
@@ -11436,7 +11547,7 @@ void idPlayer::PerformFrobCheckInternal()
 		}
 
 		DM_LOG(LC_FROBBING, LT_INFO)LOGSTRING("Frob: Direct hit on entity %s\r", ent->name.c_str());
-		
+
 		// This is taking locked items into account
 		bool lockedItemCheck = true;
 		// If we are in the mode where we only frob ents used by our inventory item, this checks if it passes the test
@@ -11458,7 +11569,7 @@ void idPlayer::PerformFrobCheckInternal()
 		}
 
 		// Inventory items might impose a reduction of the frob distance to some entities
-		if ( curItem != NULL ) 
+		if ( curItem != NULL )
 		{
 			bool bCanBeUsed = ent->CanBeUsedByItem(curItem, true);
 
@@ -11477,15 +11588,31 @@ void idPlayer::PerformFrobCheckInternal()
 
 		// If shouldering a body, we only allow "simple" frobs
 		bool frobAllowed = !m_bShoulderingBody || ent->m_bFrobSimple;
-			
+
 		// only frob frobable, non-hidden entities within their frobdistance
 		// also, do not frob the ent we are currently holding in our hands
-		if ( ent->m_bFrobable && frobAllowed && lockedItemCheck && bUsedByCheck && !isRopeMaster 
+		if ( ent->m_bFrobable && frobAllowed && lockedItemCheck && bUsedByCheck && !isRopeMaster
 			 && !ent->IsHidden() && ( traceDist < ent->m_FrobDistance )
 			 && ( ent != gameLocal.m_Grabber->GetSelected() ) )
 		{
+			// Store the trace for later reference
 			m_FrobTrace = trace;
+			// Store the frob entity
 			m_FrobEntity = ent;
+
+			if (!bFrobHelperActive)
+				// we have found our frobbed entity, so exit
+				return;
+
+			if (!m_FrobHelper.IsEntityIgnored(ent))
+			{
+				// Entity is not ignored, so show FrobHelper and return
+				m_FrobHelper.Show();
+				return;
+			}
+			// else: FrobHelper is not shown for this type of entity, but there
+			//		 could be entites in close proximity that are not ignored.
+			//		 Check them, although the FrobCheck already succeeded.
 			GetRenderView()->isHighlightedEntityValuable = ent->spawnArgs.GetString("inv_name", nullptr) != nullptr;
 			return;
 		}
@@ -11493,7 +11620,7 @@ void idPlayer::PerformFrobCheckInternal()
 
 	// If the trace didn't hit anything frobable, do the radius test
 	DM_LOG(LC_FROBBING,LT_INFO)LOGSTRING("No entity frobbed by direct LOS frob, trying frob radius.\r");
-	
+
 	idBounds frobBounds(trace.endpos);
 	frobBounds.ExpandSelf( cv_frob_width.GetFloat() );
 
@@ -11506,7 +11633,7 @@ void idPlayer::PerformFrobCheckInternal()
 	idClip_EntityList frobRangeEnts;
 	int numFrobEnt = gameLocal.clip.EntitiesTouchingBounds(frobBounds, -1, frobRangeEnts);
 
-	idVec3 vecForward = viewAngles.ToForward();
+	idVec3 vecForward = angles.ToForward();
 	float bestDot = 0;
 	idEntity* bestEnt = NULL;
 
@@ -11532,8 +11659,8 @@ void idPlayer::PerformFrobCheckInternal()
 
 		// Get the frob distance from the entity candidate
 		float frobDist = ent->m_FrobDistance;
-		idVec3 delta = ent->GetPhysics()->GetOrigin() - eyePos;
-		
+		idVec3 delta = ent->GetPhysics()->GetOrigin() - start;
+
 		float entDistance = delta.LengthFast();
 
 		if (entDistance > frobDist)
@@ -11588,6 +11715,7 @@ void idPlayer::PerformFrobCheckInternal()
 		// Store the frob entity
 		m_FrobEntity = bestEnt;
 		GetRenderView()->isHighlightedEntityValuable = bestEnt->spawnArgs.GetString("inv_name", nullptr) != nullptr;
+		// and the trace for reference
 		m_FrobTrace = trace;
 		return;
 	}
@@ -11633,7 +11761,7 @@ void idPlayer::SetHinderance( const char *source, float mCap, float aCap )
 		// Clamp the values to [0,1]
 		mCap = idMath::ClampFloat(0, 1, mCap);
 		aCap = idMath::ClampFloat(0, 1, aCap);
-		
+
 		if (mCap < 1.0f || aCap < 1.0f)
 		{
 			// Store the values into a vector and into the hinderance dictionary
@@ -11679,10 +11807,10 @@ void idPlayer::SetTurnHinderance( const char *source, float mCap, float aCap )
 	}
 }
 
-float idPlayer::GetJumpHinderance() 
+float idPlayer::GetJumpHinderance()
 {
 	// Has something changed since the cache was last calculated?
-	if (m_JumpHinderanceCache < 0.0f) 
+	if (m_JumpHinderanceCache < 0.0f)
 	{
 		// Recalculate the hinderance from scratch.
 		float mCap = 1.0f, aCap = 1.0f;
@@ -11692,13 +11820,13 @@ float idPlayer::GetJumpHinderance()
 			idVec3 vec = m_JumpHinderance.GetVector(kv->GetKey());
 			mCap *= vec[0];
 
-			if ( aCap > vec[1] ) 
+			if ( aCap > vec[1] )
 			{
 				aCap = vec[1];
 			}
 		}
 
-		if ( aCap > mCap ) 
+		if ( aCap > mCap )
 		{
 			aCap = mCap;
 		}
@@ -11770,11 +11898,11 @@ void idPlayer::PlayPlayerFootStepSound(idVec3* pPointOfContact /*= NULL*/, const
 	}
 
 	UpdateMoveVolumes();
-	
+
 	// Construct sound string based on contact material or waterlevel
 	idStr localSound("");
 	const bool skipWaterLevelCheck = pPointOfContact != NULL; // STiFU #4947: waterlevel is invalid at point of contact
-	waterLevel_t waterLevel = skipWaterLevelCheck ? WATERLEVEL_NONE : physicsObj.GetWaterLevel();	
+	waterLevel_t waterLevel = skipWaterLevelCheck ? WATERLEVEL_NONE : physicsObj.GetWaterLevel();
 	switch (waterLevel)
 	{
 	case WATERLEVEL_NONE:
@@ -11844,7 +11972,7 @@ void idPlayer::PlayPlayerFootStepSound(idVec3* pPointOfContact /*= NULL*/, const
 			moveType += "_walk";
 		}
 	}
-		
+
 	// Construct final sound string
 	idStr sound;
 	if (cv_tdm_footfalls_movetype_specific.GetBool())
@@ -11877,7 +12005,7 @@ void idPlayer::PlayPlayerFootStepSound(idVec3* pPointOfContact /*= NULL*/, const
 		localSound += moveType;
 	}
 
-	if ( !sound.IsEmpty() ) 
+	if ( !sound.IsEmpty() )
 	{
 		// grayman #3485 - volume adjustment for landing when crouched
 		bool isJumping = (gameLocal.time - physicsObj.GetLastJumpTime()) < JUMP_DETECTION_TIME; // SteveL #3716
@@ -11913,7 +12041,7 @@ equipped, and 0 otherwise.
 */
 float idPlayer::RangedThreatTo(idEntity* target) {
 	idWeapon* weaponEnt = weapon.GetEntity();
-	
+
 	return weaponEnt->IsRanged();
 }
 
@@ -12083,7 +12211,7 @@ void idPlayer::PerformFrob(EImpulseState impulseState, idEntity* target, bool al
 	// Try to add world item to inventory
 	if (impulseState == EPressed || repeatMultiloot)
 	{
-		// First we have to check whether that entity is an inventory 
+		// First we have to check whether that entity is an inventory
 		// item. In that case, we have to add it to the inventory and
 		// hide the entity.
 
@@ -12098,14 +12226,14 @@ void idPlayer::PerformFrob(EImpulseState impulseState, idEntity* target, bool al
 		m_FrobPressedTarget = target;
 
 		// Check if the frobbed entity is the one currently highlighted by the player
-		if ( (addedItem != NULL) && (highlightedEntity == target) ) 
+		if ( (addedItem != NULL) && (highlightedEntity == target) )
 		{
 			// Item has been added to the inventory, clear the entity pointer
 			m_FrobEntity = NULL;
 
 			// Obsttorte: start multiloot
 			multiloot = true;
-			multiloot_lastfrob = gameLocal.time; 
+			multiloot_lastfrob = gameLocal.time;
 
 			// grayman #3011 - is anything sitting on this inventory item?
 			target->ActivateContacts();
@@ -12319,12 +12447,12 @@ void idPlayer::PerformFrobKeyRepeat(int holdTime)
 	idEntity* frob = m_FrobEntity.GetEntity();
 
 	// use the original target until frob is released and pressed again
-	
+
 	if (m_FrobPressedTarget.IsValid() && (m_FrobPressedTarget.GetEntity() != NULL))
 	{
 		m_FrobPressedTarget.GetEntity()->FrobHeld( true, false, holdTime );
 	}
-	
+
 	// Relay the function to the specialised method
 	PerformFrob(ERepeat, frob, true);
 }
@@ -12400,7 +12528,7 @@ bool idPlayer::AddGrabberEntityToInventory()
 			// greebo: Release any items from the grabber, this immobilized the player somehow before
 			grabber->Update( this, false );
 
-			// greebo: Prevent the grabber from checking the added entity (it may be 
+			// greebo: Prevent the grabber from checking the added entity (it may be
 			// entirely removed from the game, which would cause crashes).
 			grabber->RemoveFromClipList(heldEntity);
 
@@ -12424,7 +12552,7 @@ int idPlayer::GetLightgemModifier(int curLightgemValue)
 
 		const idVec3& gravityDir = physicsObj.GetGravityNormal();
 		velocityVec -= (velocityVec * gravityDir) * gravityDir;
-		
+
 		float velocity = velocityVec.LengthFast();
 		float minVelocity = cv_lg_velocity_mod_min_velocity.GetFloat();
 		float maxVelocity = cv_lg_velocity_mod_max_velocity.GetFloat();
@@ -12473,7 +12601,7 @@ void idPlayer::Event_SetLightgemModifier(const char* modifierName, int amount)
 		DM_LOG(LC_LIGHT, LT_DEBUG)LOGSTRING("Setting modifier %s to %d\r", modifierName, amount);
 		m_LightgemModifierList[std::string(modifierName)] = amount;
 	}
-	else 
+	else
 	{
 		DM_LOG(LC_LIGHT, LT_DEBUG)LOGSTRING("Removing modifier %s as %d was passed\r", modifierName, amount);
 		// Zero value passed, remove the named value
@@ -12490,7 +12618,7 @@ void idPlayer::Event_SetLightgemModifier(const char* modifierName, int amount)
 	// Recalculate the lightgem modifier value
 	m_LightgemModifier = 0;
 
-	for (std::map<std::string, int>::const_iterator i = m_LightgemModifierList.begin(); 
+	for (std::map<std::string, int>::const_iterator i = m_LightgemModifierList.begin();
 	     i != m_LightgemModifierList.end();
 		 ++i)
 	{
@@ -12652,10 +12780,10 @@ void idPlayer::Event_MissionSuccess()
 
 	// Save current inventory into the persistent one
 	Inventory()->CopyTo(*gameLocal.persistentPlayerInventory);
-	
+
 	// Save the item entities of all persistent items
 	gameLocal.persistentPlayerInventory->SaveItemEntities(true);
-	
+
 	// Schedule the disconnect command, this needs to be done before issuing the save call
 	PostEventMS(&EV_DisconnectFromMission, 0);
 
@@ -12671,7 +12799,7 @@ void idPlayer::Event_DisconnectFromMission()
 	gameLocal.sessionCommand = "disconnect";
 }
 
-void idPlayer::Event_TriggerMissionEnd() 
+void idPlayer::Event_TriggerMissionEnd()
 {
 	if (hudMessages.Num() > 0)
 	{
@@ -12700,7 +12828,7 @@ void idPlayer::Event_StartGamePlayTimer()
 	gameLocal.m_GamePlayTimer.Start();
 }
 
-void idPlayer::Event_CheckAAS() 
+void idPlayer::Event_CheckAAS()
 {
 	if (gameLocal.GameState() >= GAMESTATE_ACTIVE)
 	{
@@ -12809,7 +12937,7 @@ void idPlayer::ClearActiveInventoryMap()
 	// Call the method inventory_map::clear(entity userEnt)
 	idThread* thread = mapEnt->CallScriptFunctionArgs("clear", true, 0, "ee", mapEnt, this);
 
-	if (thread != NULL) 
+	if (thread != NULL)
 	{
 		// Run the thread at once
 		thread->Execute();

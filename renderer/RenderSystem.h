@@ -55,6 +55,7 @@ typedef struct glconfig_s {
 	bool				geometryShaderAvailable;
 	bool				bufferStorageAvailable; // persistent mapping
 	bool				stencilTexturing;		// stencil SS
+	int					windowWidth, windowHeight;
 
 	// values of various GL limits
 	int					maxTextureSize;
@@ -75,7 +76,7 @@ int GetConsoleFontSize();
 #define SCREEN_WIDTH		640
 #define SCREEN_HEIGHT		480
 
-// font support 
+// font support
 #define GLYPH_START			0
 #define GLYPH_END			255
 #define GLYPH_CHARSTART		32
@@ -217,19 +218,19 @@ public:
 
 	/**
 	 * greebo: Get the size of the current rendercrop - unless forceDimensions == true has been passed to CropRenderSize()
-	 * the actual dimensions of the rendercrop might differ, so use these to query them, e.g. to allocate a buffer 
+	 * the actual dimensions of the rendercrop might differ, so use these to query them, e.g. to allocate a buffer
 	 * for use with CaptureRenderToBuffer().
 	 */
 	virtual void			GetCurrentRenderCropSize(int& width, int& height) = 0;
 
 	virtual void			CaptureRenderToImage( idImageScratch &image, const struct renderCrop_s *scissor = nullptr ) = 0;
-	
+
 	virtual void			PostProcess() = 0;
 
 	/**
 	 * greebo: Like CaptureRenderToFile, but writes the result into the given byte buffer.
-	 * The buffer is managed by the calling code and needs to provide space for the current rendercrop's 
-	 * size using 3 bytes per pixel (stored in order RGB). Use CropRenderSize(), then GetCurrentRenderCropSize() 
+	 * The buffer is managed by the calling code and needs to provide space for the current rendercrop's
+	 * size using 3 bytes per pixel (stored in order RGB). Use CropRenderSize(), then GetCurrentRenderCropSize()
 	 * to receive the necessary size.
 	 * stgatilov: usePbo = true is set only for lightgem capturing! (see #4395)
 	 * stgatilov: unlike CaptureRenderToImage, this capture executes all backend commands straight away (including pre-buffered ones)

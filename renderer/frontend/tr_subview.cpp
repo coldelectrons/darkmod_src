@@ -34,17 +34,18 @@ idCVar r_remoteLimitResolutionByScreenSize(
 );
 
 
-typedef struct {
-	idVec3		origin;
-	idMat3		axis;
-} orientation_t;
+// XXX VR wtf is this commented out
+// typedef struct {
+// 	idVec3		origin;
+// 	idMat3		axis;
+// } orientation_t;
 
 /*
 =================
 R_MirrorPoint
 =================
 */
-static void R_MirrorPoint( const idVec3 in, orientation_t *surface, orientation_t *camera, idVec3 &out ) {
+void R_MirrorPoint( const idVec3 in, orientation_t *surface, orientation_t *camera, idVec3 &out ) {
 	int		i;
 	idVec3	local;
 	idVec3	transformed;
@@ -66,7 +67,7 @@ static void R_MirrorPoint( const idVec3 in, orientation_t *surface, orientation_
 R_MirrorVector
 =================
 */
-static void R_MirrorVector( const idVec3 in, orientation_t *surface, orientation_t *camera, idVec3 &out ) {
+void R_MirrorVector( const idVec3 in, orientation_t *surface, orientation_t *camera, idVec3 &out ) {
 	int		i;
 	float	d;
 
@@ -137,7 +138,7 @@ R_PreciseCullSurface
 Check the surface for visibility on a per-triangle basis
 for cases when it is going to be VERY expensive to draw (subviews)
 
-If not culled, also returns the bounding box of the surface in 
+If not culled, also returns the bounding box of the surface in
 Normalized Device Coordinates, so it can be used to crop the scissor rect.
 
 OPTIMIZE: we could also take exact portal passing into consideration
@@ -281,8 +282,14 @@ static viewDef_t *R_MirrorViewBySurface( drawSurf_t *drawSurf ) {
 	camera.axis[1] = surface.axis[1];
 	camera.axis[2] = surface.axis[2];
 
+	parms->renderView.mirrorCamera = camera;
+	parms->renderView.mirrorSurface = surface;
+	parms->renderView.isMirrorGen = true;
+
 	// set the mirrored origin and axis
 	R_MirrorPoint( tr.viewDef->renderView.vieworg, &surface, &camera, parms->renderView.vieworg );
+	R_MirrorPoint( tr.viewDef->renderView.eyeorg[0], &surface, &camera, parms->renderView.eyeorg[0] );
+	R_MirrorPoint( tr.viewDef->renderView.eyeorg[1], &surface, &camera, parms->renderView.eyeorg[1] );
 
 	R_MirrorVector( tr.viewDef->renderView.viewaxis[0], &surface, &camera, parms->renderView.viewaxis[0] );
 	R_MirrorVector( tr.viewDef->renderView.viewaxis[1], &surface, &camera, parms->renderView.viewaxis[1] );
@@ -331,7 +338,7 @@ R_RemoteRender
 */
 static void R_RemoteRender( drawSurf_t *surf, textureStage_t *stage, const idBounds *ndcBounds ) {
 	// if the entity doesn't have a remoteRenderView, do nothing
-	if ( !surf->space->entityDef->parms.remoteRenderView ) 
+	if ( !surf->space->entityDef->parms.remoteRenderView )
 		return;
 
 	TRACE_CPU_SCOPE( "R_RemoteRender" );
@@ -513,7 +520,7 @@ void R_PortalRender() {
 	parms->isPortalSky = true;
 	parms->isMirrorGen = false;
 
-	parms->renderView.viewaxis = parms->renderView.viewaxis * gameLocal.GetLocalPlayer()->playerView.ShakeAxis();
+	parms->renderView.initialViewaxis = parms->renderView.initialViewaxis * gameLocal.GetLocalPlayer()->playerView.ShakeAxis();
 
 	// grayman #3108 - contributed by neuro & 7318
 	idVec3 diff, currentEyePos, PSOrigin, Zero;
@@ -552,7 +559,12 @@ void R_PortalRender() {
 		// end neuro & 7318
 
 		parms->renderView.vieworg = PSOrigin;	// grayman #3108 - contributed by neuro & 7318
+		parms->renderView.eyeorg[0] = PSOrigin;
+		parms->renderView.eyeorg[1] = PSOrigin;
 		parms->renderView.viewaxis = tr.viewDef->renderView.viewaxis * gameLocal.portalSkyEnt.GetEntity()->GetPhysics()->GetAxis();
+		parms->renderView.initialVieworg = PSOrigin;
+		parms->renderView.initialViewaxis = tr.viewDef->renderView.initialViewaxis * gameLocal.portalSkyEnt.GetEntity()->GetPhysics()->GetAxis();
+		parms->renderView.fixedOrigin = true;
 
 		// set up viewport, adjusted for resolution and OpenGL style 0 at the bottom
 		tr.RenderViewToViewport( parms->renderView, parms->viewport );
@@ -673,7 +685,7 @@ bool R_Lightgem_Render() {
 	idVec3 LGPos = player->GetPhysics()->GetOrigin();// Set the lightgem position to that of the player
 
 	// Move the lightgem out a fraction along the leaning vector
-	LGPos.x += (Cam.x - LGPos.x) * 0.3f + cv_lg_oxoffs.GetFloat(); 
+	LGPos.x += (Cam.x - LGPos.x) * 0.3f + cv_lg_oxoffs.GetFloat();
 	LGPos.y += (Cam.y - LGPos.y) * 0.3f + cv_lg_oyoffs.GetFloat();
 
 	// Prevent lightgem from clipping into the floor while crouching
@@ -698,7 +710,11 @@ bool R_Lightgem_Render() {
 		0.0f, 0.0f, 1.0f,
 		0.0f, 1.0f, 0.0f,
 		-1.0f, 0.0f, 0.0f
-	); 
+	);
+	// VR: must reset the view org, as otherwise we get the position of the headset
+	lightgemRv.vieworg = tr.viewDef->renderView.initialVieworg;
+	lightgemRv.eyeorg[0] = tr.viewDef->renderView.initialVieworg;
+	lightgemRv.eyeorg[1] = tr.viewDef->renderView.initialVieworg;
 
 	// Give the rv the current ambient light values (obsolete #5449)
 	lightgemRv.shaderParms[2] = 0.0f;
@@ -719,7 +735,7 @@ bool R_Lightgem_Render() {
 	prent->suppressShadowInViewID = VID_LIGHTGEM;
 	prent->suppressSurfaceInViewID = VID_LIGHTGEM;
 
-	// And the player's head 
+	// And the player's head
 	renderEntity_t* hrent = player->GetHeadEntity()->GetRenderEntity();
 	const int hdef = player->GetHeadEntity()->GetModelDefHandle();
 	const int headid = hrent->suppressSurfaceInViewID;
@@ -806,10 +822,10 @@ bool	R_GenerateSurfaceSubview( drawSurf_t *drawSurf ) {
 	const idMaterial		*shader;
 
 	// for testing the performance hit
-	if ( r_skipSubviews ) 
+	if ( r_skipSubviews )
 		return false;
 
-	if ( R_PreciseCullSurface( drawSurf, ndcBounds ) ) 
+	if ( R_PreciseCullSurface( drawSurf, ndcBounds ) )
 		return false;
 
 	shader = drawSurf->material;
@@ -871,7 +887,7 @@ bool R_GenerateSubViews( void ) {
 	TRACE_CPU_SCOPE( "R_GenerateSubViews" )
 
 	// for testing the performance hit
-	if ( r_skipSubviews || tr.viewDef->areaNum < 0 ) 
+	if ( r_skipSubviews || tr.viewDef->areaNum < 0 )
 		return false;
 
 	// duzenko #4420: no mirrors on lightgem stage

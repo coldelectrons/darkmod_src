@@ -163,7 +163,7 @@ extern "C" gameExport_t *GetGameAPI( gameImport_t *import ) {
 		// stuff initialised and getting segfaults.
 		// The old dll (pre v1.08) will output something like:
 		// "Ensure the correct Doom 3 patches are installed." which is misleading.
-		std::cerr << "FATAL: Incorrect game version: required " 
+		std::cerr << "FATAL: Incorrect game version: required "
 			<< GAME_API_VERSION << ", got " << import->version << "\n"
 			<< "Use the latest TheDarkMod executable with the latest game DLL." << std::endl;
 		abort();
@@ -239,7 +239,7 @@ idGameLocal::idGameLocal() :
 idGameLocal::~idGameLocal
 ============
 */
-idGameLocal::~idGameLocal() 
+idGameLocal::~idGameLocal()
 {
 }
 
@@ -291,7 +291,7 @@ void idGameLocal::Clear( void )
 	{
 		m_LightController->Clear();
 	}
-	
+
 #ifdef TIMING_BUILD
 	debugtools::TimerManager::Instance().Clear();
 #endif
@@ -301,7 +301,7 @@ void idGameLocal::Clear( void )
 
 	m_searchManager = CSearchManager::Instance(); // grayman #3857
 	m_searchManager->Clear(); // grayman #3857
-	
+
 	m_Interleave = 0;
 
 	m_lightGem.Clear();
@@ -313,7 +313,7 @@ void idGameLocal::Clear( void )
 	m_peekOverlay = 0; // grayman #4882 - no need to save/restore
 
 	m_InterMissionTriggers.Clear();
-	
+
 	serverInfo.Clear();
 	numClients = 0;
 		userInfo.Clear();
@@ -463,8 +463,8 @@ void idGameLocal::Init( void ) {
 	Printf( "--------- Initializing Game ----------\n" );
 
 	int revision = RevisionTracker::Instance().GetHighestRevision();
-	Printf( "%s %d.%02d/%zu, %s, code revision %d\n", 
- 		GAME_VERSION, 
+	Printf( "%s %d.%02d/%zu, %s, code revision %d\n",
+ 		GAME_VERSION,
 		TDM_VERSION_MAJOR,
 		TDM_VERSION_MINOR,
 		sizeof(void*) * 8,
@@ -505,7 +505,7 @@ void idGameLocal::Init( void ) {
 
 	// load default scripts
 	program.Startup( SCRIPT_DEFAULT );
-	
+
 	smokeParticles = new idSmokeParticles;
 
 	// set up the aas
@@ -537,7 +537,7 @@ void idGameLocal::Init( void ) {
 	m_DownloadMenu = CDownloadMenuPtr(new CDownloadMenu);
 	m_DownloadManager = CDownloadManagerPtr(new CDownloadManager);
 	m_ConversationSystem = ai::ConversationSystemPtr(new ai::ConversationSystem);
-	
+
 	// load the soundprop globals from the def file
 	m_sndPropLoader->GlobalsFromDef();
 
@@ -599,7 +599,7 @@ void idGameLocal::CheckTDMVersion()
 	msg.type = GuiMessage::MSG_OK;
 	msg.okCmd = "close_msg_box";
 
-	if (m_HttpConnection == NULL) 
+	if (m_HttpConnection == NULL)
 	{
 		Printf("HTTP requests disabled, skipping TDM version check.\n");
 
@@ -637,7 +637,7 @@ void idGameLocal::CheckTDMVersion()
 		int major = node.node().attribute("major").as_int();
 		int minor = node.node().attribute("minor").as_int();
 
-		msg.title = va( common->Translate( "#str_02132" ), major, minor );	// Most recent version is: 
+		msg.title = va( common->Translate( "#str_02132" ), major, minor );	// Most recent version is:
 
 		switch (CompareVersion(TDM_VERSION_MAJOR, TDM_VERSION_MINOR, major, minor))
 		{
@@ -684,10 +684,10 @@ void idGameLocal::Shutdown( void ) {
 	}
 
 	Printf( "------------ Game Shutdown -----------\n" );
-	
+
 	MapShutdown();
 
-	// greebo: De-allocate the missiondata singleton, this is not 
+	// greebo: De-allocate the missiondata singleton, this is not
 	// done in MapShutdown() (needed for mission statistics)
 	m_MissionData.reset();
 	m_CampaignStats.reset();
@@ -782,7 +782,7 @@ void idGameLocal::SaveGame( idFile *f ) {
 
 	idSaveGame savegame( f );
 
-	if (g_flushSave.GetBool( ) == true ) { 
+	if (g_flushSave.GetBool( ) == true ) {
 		// force flushing with each write... for tracking down
 		// save game bugs.
 		f->ForceFlush();
@@ -921,7 +921,7 @@ void idGameLocal::SaveGame( idFile *f ) {
 	{
 		m_ambientLights[i].Save(&savegame);
 	}
-		
+
 	savegame.WriteInt(spawnedAI.Num());
 	for (idAI* ai = spawnedAI.Next(); ai != NULL; ai = ai->aiNode.Next()) {
 		savegame.WriteObject(ai);
@@ -937,7 +937,7 @@ void idGameLocal::SaveGame( idFile *f ) {
 	{
 		savegame.WriteObject(campaignInfoEntities[i]);
 	}
-	
+
 	for( i = 0; i < MAX_GLOBAL_SHADER_PARMS; i++ ) {
 		savegame.WriteFloat( globalShaderParms[ i ] );
 	}
@@ -1092,7 +1092,7 @@ void idGameLocal::SaveGame( idFile *f ) {
 	for( i = 0; i < cmds; i++ ) {
 		savegame.WriteString( m_GUICommandStack[i] );
 	}
-	
+
 	// greebo: Close the savegame, this will invoke a recursive Save on all registered objects
 	savegame.Close();
 
@@ -1318,7 +1318,7 @@ const idDict* idGameLocal::SetUserInfo( int clientNum, const idDict &userInfo, b
 				idGameLocal::userInfo.Set( "ui_name", va( "%s_", idGameLocal::userInfo.GetString( "ui_name" ) ) );
 				modifiedInfo = true;
 			}
-		
+
 			// don't allow dupe nicknames
 			for ( i = 0; i < numClients; i++ ) {
 				if ( i == clientNum ) {
@@ -1379,14 +1379,14 @@ Initializes all map variables common to both save games and spawned games.
 */
 void idGameLocal::LoadMap( const char *mapName, int randseed ) {
 	int i;
-	// A couple of flags to track whether we are reloading the same map. "bool sameMap" has been around for a while, 
-	// and checks for reloading the currently active map. It'll usually be false, as the map will have been shut 
+	// A couple of flags to track whether we are reloading the same map. "bool sameMap" has been around for a while,
+	// and checks for reloading the currently active map. It'll usually be false, as the map will have been shut
 	// down even when doing a quick load. "mapFileName" acts as a flag: active vs shut down.
 	// "sameAsPrevMap" checks for a quickload. Added for #2807: Random GUI quotes on loading screen -- SteveL TDM2.04
-	bool sameMap = (mapFile && idStr::Icmp(mapFileName, mapName) == 0); 
+	bool sameMap = (mapFile && idStr::Icmp(mapFileName, mapName) == 0);
 	bool sameAsPrevMap = mapFile && idStr::Icmp(mapFile->GetName(), mapName) == 0;
 
-	// Still with #2807: Random GUI quotes on loading screen. Next code block moved here from 
+	// Still with #2807: Random GUI quotes on loading screen. Next code block moved here from
 	// InitFromNewMap() so that loading of saved games can show tips too.
 	idStr mapNameStr = mapName;
 	mapNameStr.StripLeadingOnce("maps/");
@@ -1398,8 +1398,8 @@ void idGameLocal::LoadMap( const char *mapName, int randseed ) {
 		idRandom simpleRnd(randseed);
 		float random_value = simpleRnd.RandomFloat();
 		loadingGUI->SetStateFloat("random_value", random_value);
-		// #2807: Allow GUI scripts to distinguish between a quickload and a full load, so 
-		// they can choose to show only short messages. 
+		// #2807: Allow GUI scripts to distinguish between a quickload and a full load, so
+		// they can choose to show only short messages.
 		loadingGUI->SetStateBool("quickloading", sameAsPrevMap);
 		// Activate any GUI code that depends on this random value (which includes random text)
 		loadingGUI->HandleNamedEvent("OnRandomValueInitialised");
@@ -1413,7 +1413,7 @@ void idGameLocal::LoadMap( const char *mapName, int randseed ) {
 	musicSpeakers.Clear();			// Tels: Clear the list even on reload to account for dynamic changes
 	cv_music_volume.SetModified();	// SnoopJeDi: we want to fade on level start
 
-	realClientTime = 0; 
+	realClientTime = 0;
 
 	if ( !sameMap || ( mapFile && mapFile->NeedsReload() ) ) {
 		// load the .map file
@@ -1441,7 +1441,7 @@ void idGameLocal::LoadMap( const char *mapName, int randseed ) {
 	memset( &usercmds, 0, sizeof( usercmds ) );
 	memset( spawnIds.Ptr(), -1, spawnIds.MemoryUsed() );
 	spawnCount = INITIAL_SPAWN_COUNT;
-	
+
 	spawnedEntities.Clear();
 	activeEntities.Clear();
 	spawnedAI.Clear();
@@ -1649,11 +1649,11 @@ void idGameLocal::HotReloadMap(const char *mapDiff, bool skipTimestampCheck) {
 		for (int i = 0; i < diffArgs.GetNumKeyVals(); i++) {
 			const idKeyValue *kv = diffArgs.GetKeyVal(i);
 			if (
-				kv->GetKey().Icmp("spawnclass") == 0 || 
-				kv->GetKey().Icmp("classname") == 0 || 
-				kv->GetKey().IcmpPrefix("def_attach") == 0 || 
-				kv->GetKey().IcmpPrefix("pos_attach") == 0 || 
-				kv->GetKey().IcmpPrefix("name_attach") == 0 || 
+				kv->GetKey().Icmp("spawnclass") == 0 ||
+				kv->GetKey().Icmp("classname") == 0 ||
+				kv->GetKey().IcmpPrefix("def_attach") == 0 ||
+				kv->GetKey().IcmpPrefix("pos_attach") == 0 ||
+				kv->GetKey().IcmpPrefix("name_attach") == 0 ||
 				kv->GetKey().IcmpPrefix("set ") == 0 ||
 				kv->GetKey().IcmpPrefix("add_link") == 0 ||
 				kv->GetKey().IcmpPrefix("s_") == 0 ||		//should we try to update sound properties?...
@@ -1883,7 +1883,7 @@ void idGameLocal::MapPopulate( void ) {
 	m_sndProp->SetupFromLoader( m_sndPropLoader );
 
 	m_sndPropLoader->Shutdown(); // And here's why you can't use m_sndPropLoader after this point
-	
+
 	// Initialise the escape point manager after all the entities have been spawned.
 	m_EscapePointManager->InitAAS();
 
@@ -1907,7 +1907,7 @@ void idGameLocal::InitFromNewMap( const char *mapName, idRenderWorld *renderWorl
 	if ( mapFileName.Length() ) {
 		MapShutdown();
 	}
-	
+
 	// greebo: Clear the mission data, it might have been filled during the objectives screen display
 	m_MissionData->Clear();
 
@@ -1932,7 +1932,7 @@ void idGameLocal::InitFromNewMap( const char *mapName, idRenderWorld *renderWorl
 
 	// Immediately apply the CVAR difficulty settings
 	m_DifficultyManager.ApplyCVARDifficultySettings();
-	
+
 	InitScriptForMap();
 
 	// Initialize the AI relationships
@@ -2358,7 +2358,7 @@ bool idGameLocal::InitFromSaveGame( const char *mapName, idRenderWorld *renderWo
 	idEvent::Restore( &savegame );
 
 	// Tels: Restore the GUI command stack
-	int cmds; 
+	int cmds;
 	savegame.ReadInt( m_GUICommandArgs );
 	savegame.ReadInt( cmds );
 	m_GUICommandStack.Clear();
@@ -2467,7 +2467,7 @@ void idGameLocal::MapShutdown( void ) {
 	{
 		m_Grabber->Clear();
 	}
-	
+
 	MapClear( true );
 
 	session->ResetMainMenu();
@@ -2512,7 +2512,7 @@ void idGameLocal::MapShutdown( void ) {
 		m_ModelGenerator->Print();
 		m_ModelGenerator->Clear();
 	}
-	
+
 	if (m_LightController != NULL)
 	{
 		m_LightController->Clear();
@@ -2722,7 +2722,7 @@ void idGameLocal::CacheDictionaryMedia( const idDict *dict ) {
 	while( kv ) {
 		if ( kv->GetValue().Length() ) {
 			if ( !idStr::Icmp( kv->GetKey(), "gui_noninteractive" )
-				|| !idStr::Icmpn( kv->GetKey(), "gui_parm", 8 )	
+				|| !idStr::Icmpn( kv->GetKey(), "gui_parm", 8 )
 				|| !idStr::Icmp( kv->GetKey(), "gui_inventory" ) ) {
 				// unfortunate flag names, they aren't actually a gui
 			} else {
@@ -3202,7 +3202,7 @@ void idGameLocal::SortActiveEntityList( void ) {
 		int group = (
 			hasParametric ? 0 :		// pushers first
 			hasActor ? 1 :			// actors next
-			2						// finally, all the rest 
+			2						// finally, all the rest
 		);
 		// without eah group, put team masters first
 		group = 2 * group + !isTeamMaster;
@@ -3365,7 +3365,7 @@ gameReturn_t idGameLocal::RunFrame( const usercmd_t *clientCmds, int timestepMs,
 			// sort the active entity list
 			SortActiveEntityList();
 
-			// check and possibly switch LOD levels 
+			// check and possibly switch LOD levels
 			lodSystem.ThinkAllLod();
 
 			timer_think.Clear();
@@ -3424,7 +3424,7 @@ gameReturn_t idGameLocal::RunFrame( const usercmd_t *clientCmds, int timestepMs,
 			}
 
 			timer_think.Stop();
-		
+
 			//DM_LOG(LC_ENTITY, LT_INFO)LOGSTRING("Thinking timer: %lfms\r", timer_think.Milliseconds());
 
 			timer_events.Clear();
@@ -3505,7 +3505,7 @@ gameReturn_t idGameLocal::RunFrame( const usercmd_t *clientCmds, int timestepMs,
 			}
 
 			/*if (m_DoLightgem) // duzenko #4408 - move this to idGameLocal::Draw where the second half of this already is
-			{					// because 1) game tic could be on background thread and 2) it makes more sense 
+			{					// because 1) game tic could be on background thread and 2) it makes more sense
 				player->ProcessLightgem(cv_lg_hud.GetInteger() == 0);
 				m_DoLightgem = false;
 			}*/
@@ -3516,14 +3516,14 @@ gameReturn_t idGameLocal::RunFrame( const usercmd_t *clientCmds, int timestepMs,
 	ret.syncNextGameFrame = skipCinematic;
 	if ( skipCinematic ) {
 		soundSystem->SetMute( false );
-		skipCinematic = false;		
+		skipCinematic = false;
 	}
 
 	// show any debug info for this frame
 	RunDebugInfo();
 	D_DrawDebugLines();
 
-	DM_LOG(LC_FRAME, LT_INFO)LOGSTRING("Frame end %d - %d: all:%.1f th:%.1f ev:%.1f %d ents \r", 
+	DM_LOG(LC_FRAME, LT_INFO)LOGSTRING("Frame end %d - %d: all:%.1f th:%.1f ev:%.1f %d ents \r",
 		time, timer_think.Milliseconds() + timer_events.Milliseconds(),
 		timer_think.Milliseconds(), timer_events.Milliseconds(), num );
 
@@ -3851,7 +3851,7 @@ idGameLocal::UpdateGUIScaling
 */
 void idGameLocal::UpdateGUIScaling( idUserInterface *gui )
 {
-	
+
 	float wobble = 1.0f;
 	// this could be turned into a warble-wobble effect f.i. for player poisoned etc.
 	//float wobble = random.RandomFloat() * 0.02 + 0.98;
@@ -3873,8 +3873,8 @@ void idGameLocal::UpdateGUIScaling( idUserInterface *gui )
 	gui->SetStateFloat("HEIGHT", y_mul);
 	// We have only one scaling factor to scale text, so use the average of X and Y
 	// This will have odd effects if W and H differ greatly, but is better than to not scale the text
-	gui->SetStateFloat("SCALE", (y_mul + x_mul) / 2);	
-	
+	gui->SetStateFloat("SCALE", (y_mul + x_mul) / 2);
+
 	/*
 	gui->SetStateFloat("iconSize", cvarSystem->GetCVarFloat("gui_iconSize"));
 	gui->SetStateFloat("smallTextSize", cvarSystem->GetCVarFloat("gui_smallTextSize"));
@@ -3894,7 +3894,7 @@ void idGameLocal::HandleMainMenuCommands( const char *menuCommand, idUserInterfa
 	/* Tels: This routine here is called for every "command" in the menu GUI. Unfortunately,
 	   		 the interpretation of what is a command works a bit strange (as almost everything
 			 else does in idTech4 :)
-		
+
 		In the following examples, there is usually another call to this routine with ";"
 		as the "menuCommand" param. But sometimes it does not appear, depending on whoknows.
 		(stgatilov 2.09: outer code breaks full cmd string into tokens and passes every token here)
@@ -4053,7 +4053,7 @@ void idGameLocal::HandleMainMenuCommands( const char *menuCommand, idUserInterfa
 
 				gui->SetStateInt("DebriefingVideoLength", videoLengthMsec);
 				gui->SetStateString("DebriefingVideoSoundCmd", videoSoundCmd);
-				
+
 				// Let the GUI know whether we have a debriefing video
 				gui->SetStateBool("HasDebriefingVideo", debriefingVideo.Num() > 0);
 
@@ -4064,7 +4064,7 @@ void idGameLocal::HandleMainMenuCommands( const char *menuCommand, idUserInterfa
 				gui->SetStateBool("PostMissionScreenActive", true);
 				postMissionScreenActive = true;
 			}*/
-			
+
 			// tels: We handled this command, so clear the command stack
 			m_GUICommandStack.Clear();
 			m_GUICommandArgs = 0;
@@ -4173,6 +4173,7 @@ void idGameLocal::HandleMainMenuCommands( const char *menuCommand, idUserInterfa
 			{"OBJECTIVES", "ObjectivesState", "EXTRAMENU_INGAME", "Music%INGAME%"},
 			{"SHOP", "ShopMenuState", "SHOP", "MusicBriefing"},
 			{"SETTINGS", "SettingsMenuState", "MAINMENU_%INGAME%", "Music%INGAME%"},
+			{"VRSETTINGS", "VRSettingsMenuState", "MAINMENU_%INGAME%", "Music%INGAME%"},
 			{"SELECT_LANGUAGE", "SelectLanguageState", "MAINMENU_%INGAME%", "Music%INGAME%"},
 			{"DOWNLOAD", "DownloadMissionsMenuState", "EXTRAMENU_NOTINGAME", "Music%INGAME%"},
 			{"DEBRIEFING", "DebriefingState", "DEBRIEFING", "MusicDebriefing"},
@@ -4417,8 +4418,8 @@ void idGameLocal::HandleMainMenuCommands( const char *menuCommand, idUserInterfa
 		}
 
 		DM_LOG(LC_MAINMENU, LT_INFO)LOGSTRING("%s\r", m_GUICommandStack[1].c_str() );
-	}	
-	else if (cmd == "close") 
+	}
+	else if (cmd == "close")
 	{
 		// Solarsplace: fix for #2424:
 		mainMenuExited = true;
@@ -4428,7 +4429,7 @@ void idGameLocal::HandleMainMenuCommands( const char *menuCommand, idUserInterfa
 	}
 	else if (cmd == "loadvideodefinitions")
 	{
-		// Check if we've set up the briefing video 
+		// Check if we've set up the briefing video
 		if (!briefingVideoInfoLoaded)
 		{
 			briefingVideoInfoLoaded = true;
@@ -4455,7 +4456,7 @@ void idGameLocal::HandleMainMenuCommands( const char *menuCommand, idUserInterfa
 
 		gui->SetStateInt("BriefingVideoLength", videoLengthMsec);
 		gui->SetStateString("BriefingVideoSoundCmd", videoSoundCmd);
-		
+
 		// We start with the first part
 		curBriefingVideoPart = 0;
 	}
@@ -4503,14 +4504,14 @@ void idGameLocal::HandleMainMenuCommands( const char *menuCommand, idUserInterfa
 				}
 			}
 
-			gui->SetStateInt("briefingVideoTime", videoTime);	
+			gui->SetStateInt("briefingVideoTime", videoTime);
 		}
 	}
 	else if (cmd == "preparedebriefingvideo")
 	{
 		// Ensure we've set up the debriefing video (should already be done in "loadVideoDefinitions")
 		assert(briefingVideoInfoLoaded);
-		
+
 		// We start with the first part
 		curDebriefingVideoPart = 0;
 	}
@@ -4558,7 +4559,7 @@ void idGameLocal::HandleMainMenuCommands( const char *menuCommand, idUserInterfa
 				}
 			}
 
-			gui->SetStateInt("debriefingVideoTime", videoTime);	
+			gui->SetStateInt("debriefingVideoTime", videoTime);
 		}
 	}
 	else if (cmd == "onsuccessscreencontinueclicked")
@@ -4590,7 +4591,7 @@ void idGameLocal::HandleMainMenuCommands( const char *menuCommand, idUserInterfa
 	{
 		// Lockpicking difficulty setting changed, update CVARs
 		int setting = gui->GetStateInt("lp_difficulty", "-1");
-		
+
 		switch (setting)
 		{
 		case 0: // Trainer
@@ -4793,7 +4794,7 @@ void idGameLocal::HandleMainMenuCommands( const char *menuCommand, idUserInterfa
 	{
 		// Melee difficulty setting changed, update CVARs
 		int setting = gui->GetStateInt("melee_difficulty", "-1");
-		
+
 		switch (setting)
 		{
 		case 0: // Normal
@@ -4900,12 +4901,12 @@ void idGameLocal::HandleMainMenuCommands( const char *menuCommand, idUserInterfa
 	}
 	else if (cmd == "lod_bias_changed")		// Adding a way to update cooked data from menu - J.C.Denton
 	{
-		// Add the command to buffer, but no need to issue it immediately. 
+		// Add the command to buffer, but no need to issue it immediately.
 		cmdSystem->BufferCommandText( CMD_EXEC_APPEND, "tdm_lod_bias_changed\n" );
 	}
 	else if (cmd == "shadowimplchanged")	// We have to call "reloadModels" to make sure shadows implementations toggle correctly
 	{										// stgatilov: added for 2.07
-		// Add the command to buffer, but no need to issue it immediately. 
+		// Add the command to buffer, but no need to issue it immediately.
 		cmdSystem->BufferCommandText( CMD_EXEC_APPEND, "reloadModels\n" );
 	}
 	else if (cmd == "resetbrightness")
@@ -5003,7 +5004,7 @@ void idGameLocal::HandleMainMenuCommands( const char *menuCommand, idUserInterfa
 	/*if (cv_debug_mainmenu.GetBool())
 	{
 		const idDict& state = gui->State();
-		
+
 		for (int i = 0; i < state.GetNumKeyVals(); ++i)
 		{
 			const idKeyValue* kv = state.GetKeyVal(i);
@@ -5202,11 +5203,11 @@ void idGameLocal::RunDebugInfo( void ) {
 			if ( viewTextBounds.IntersectsBounds( entBounds ) ) {
 				gameRenderWorld->DebugText( ent->name.c_str(), entBounds.GetCenter(), 0.1f, colorWhite, axis, 1 );
 				gameRenderWorld->DebugText( va( "#%d", ent->entityNumber ), entBounds.GetCenter() + up, 0.1f, colorWhite, axis, 1 );
-				gameRenderWorld->DebugText( 
-					va( "%d / %d", ent->GetPhysics()->GetContents(), ent->GetPhysics()->GetClipMask() ), 
-					entBounds.GetCenter() - up, 0.1f, 
-					colorWhite, 
-					axis, 1 
+				gameRenderWorld->DebugText(
+					va( "%d / %d", ent->GetPhysics()->GetContents(), ent->GetPhysics()->GetClipMask() ),
+					entBounds.GetCenter() - up, 0.1f,
+					colorWhite,
+					axis, 1
 				);
 			}
 		}
@@ -5251,7 +5252,7 @@ void idGameLocal::RunDebugInfo( void ) {
 			if ( !viewBounds.IntersectsBounds( ent->GetPhysics()->GetAbsBounds() ) ) {
 				continue;
 			}
-			
+
 			gameRenderWorld->DebugText(va("Health: %d", ent->health), ent->GetPhysics()->GetOrigin(), 0.2f, colorGreen, axis);
 		}
 	}
@@ -5660,7 +5661,7 @@ idEntity *idGameLocal::SpawnEntityType( const idTypeInfo &classdef, const idDict
 		obj = classdef.CreateInstance();
 		obj->CallSpawn();
 	}
-	
+
 	catch( idAllocError & ) {
 		obj = NULL;
 	}
@@ -5792,7 +5793,7 @@ bool idGameLocal::InhibitEntitySpawn( const idDict &spawnArgs ) {
 	bool inhibit_spawn = false;
 
 	// #3933 prevent inlined FS from spawning
-	if ( spawnArgs.GetBool("inline") && idStr("func_static") == spawnArgs.GetString("classname") ) 
+	if ( spawnArgs.GetBool("inline") && idStr("func_static") == spawnArgs.GetString("classname") )
 	{
 		inhibit_spawn = true;
 	}
@@ -5802,7 +5803,7 @@ bool idGameLocal::InhibitEntitySpawn( const idDict &spawnArgs ) {
 	{
 		inhibit_spawn = true;
 	}
-	
+
 	if ( m_DifficultyManager.InhibitEntitySpawn(spawnArgs) )
 	{
 		inhibit_spawn = true;
@@ -6798,7 +6799,7 @@ void idGameLocal::SetCamera( idCamera *cam ) {
 
 		// set r_znear so that transitioning into/out of the player's head doesn't clip through the view
 		cvarSystem->SetCVarFloat( "r_znear", 1.0f );
-		
+
 		// hide all the player models
 		for( i = 0; i < numClients; i++ ) {
 			if ( entities[ i ] ) {
@@ -6814,7 +6815,7 @@ void idGameLocal::SetCamera( idCamera *cam ) {
 					// only kill entities that aren't needed for cinematics and aren't dormant
 					continue;
 				}
-				
+
 				if ( ent->IsType( idAI::Type ) ) {
 					ai = static_cast<idAI *>( ent );
 					if ( !ai->GetEnemy() || !ai->IsActive() ) {
@@ -7020,7 +7021,7 @@ idEntity *idGameLocal::SelectInitialSpawnPoint( idPlayer *player ) {
 			foundSpot = true;
 		}
 	}
-	
+
 	if ( !foundSpot )
 	{
 		spot.ent = FindEntityUsingDef( NULL, "info_player_start" );
@@ -7267,7 +7268,7 @@ bool idGameLocal::DoesOpeningExist( const idVec3 origin, const idVec3 target, co
 	// Trace from target to origin to determine rough barrier depth
 	trace_t result;
 	gameLocal.clip.TracePoint(result, target, origin, (CONTENTS_WATER|CONTENTS_SOLID), ent);
-	
+
 	float barrierDepth = dist2Target*(1 - result.fraction);
 	idVec3 forwardVector = (GAS_PLANE_OFFSET + barrierDepth + GAS_PLANE_OFFSET)*(-normal); // use this at testPoint to find endPoint
 
@@ -7488,7 +7489,7 @@ int idGameLocal::DoResponseAction(const CStimPtr& stim, const idClip_EntityList 
 	int numResponses = 0;
 	for ( int i = 0 ; i < numEntities ; i++ )
 	{
-		// ignore the original entity because an entity shouldn't respond 
+		// ignore the original entity because an entity shouldn't respond
 		// to its own stims.
 		if ( ( srEntities[i] == originator ) || ( srEntities[i]->GetResponseEntity() == originator ) )
 		{
@@ -7884,13 +7885,13 @@ void idGameLocal::ProcessStimResponse(unsigned int ticks)
 					stim->m_bCollisionFired = false;
 					stim->m_CollisionEnts.Clear();
 				}
-				else 
+				else
 				{
 					// Radius based stims
 					n = clip.EntitiesTouchingBounds(bounds, CONTENTS_RESPONSE, srEntities);
 					//DM_LOG(LC_STIM_RESPONSE, LT_INFO)LOGSTRING("Entities touching bounds: %d\r", n);
 				}
-				
+
 				if (n > 0)
 				{
 					if (cv_sr_show.GetInteger() > 1)
@@ -7931,11 +7932,11 @@ Dark Mod:
 idGameLocal::LocationForArea
 ===================
 */
-idLocationEntity *idGameLocal::LocationForArea( const int areaNum ) 
+idLocationEntity *idGameLocal::LocationForArea( const int areaNum )
 {
 	idLocationEntity *pReturnval( NULL );
-	
-	if ( !locationEntities || areaNum < 0 || areaNum >= gameRenderWorld->NumAreas() ) 
+
+	if ( !locationEntities || areaNum < 0 || areaNum >= gameRenderWorld->NumAreas() )
 	{
 		pReturnval = NULL;
 		goto Quit;
@@ -7978,7 +7979,7 @@ idEntity *idGameLocal::PlayerTraceEntity( void )
 		if( returnEnt == gameLocal.world )
 			returnEnt = NULL;
 	}
-	
+
 Quit:
 	return returnEnt;
 }
@@ -7990,14 +7991,14 @@ void idGameLocal::PauseGame( bool bPauseState )
 		gameSoundWorldBuf = soundSystem->GetPlayingSoundWorld();
 		gameSoundWorldBuf->Pause();
 		soundSystem->SetPlayingSoundWorld( NULL );
-	
+
 		g_stopTime.SetBool( true );
 	}
 	else
 	{
 		soundSystem->SetPlayingSoundWorld( gameSoundWorldBuf );
 		soundSystem->GetPlayingSoundWorld()->UnPause();
-		
+
 		g_stopTime.SetBool( false );
 	}
 }
@@ -8007,7 +8008,7 @@ void idGameLocal::SetMissionResult(EMissionResult result)
 	m_MissionResult = result;
 }
 
-EMissionResult idGameLocal::GetMissionResult() const 
+EMissionResult idGameLocal::GetMissionResult() const
 {
 	return m_MissionResult;
 }
@@ -8020,8 +8021,8 @@ float idGameLocal::CalcLightgem( idPlayer *a_pPlayer )
 ===================
 Dark Mod:
 idGameLocal::FindMainAmbientLight
-Author: J.C.Denton 
-Usage:	Finds main ambient light by the name "ambient_world". 
+Author: J.C.Denton
+Usage:	Finds main ambient light by the name "ambient_world".
 		If it can't be found, finds ambient light with largest radius and rename it to ambient_world before returning pointer to it.
 		grayman - The renaming isn't done. The found light's name is saved as the main ambient light.
 ===================
@@ -8052,7 +8053,7 @@ idLight* idGameLocal::FindMainAmbientLight( bool a_bCreateNewIfNotFound /*= fals
 		return NULL;
 	}
 
-	gameLocal.Printf("Ambient light 'ambient_world' not found, attempting to create a new one.\n"); 
+	gameLocal.Printf("Ambient light 'ambient_world' not found, attempting to create a new one.\n");
 
 	idLight *pLightEntMainAmbient = NULL;
 	float fMaxRadius = 0.0f;
@@ -8065,7 +8066,7 @@ idLight* idGameLocal::FindMainAmbientLight( bool a_bCreateNewIfNotFound /*= fals
 		idLight *plight = m_ambientLights[i].GetEntity();
 		if ( plight != NULL )
 		{
-			idVec3 vec3LightRadius; 
+			idVec3 vec3LightRadius;
 			plight->GetRadius( vec3LightRadius );
 			float fRadius = vec3LightRadius.LengthFast();
 
@@ -8080,7 +8081,7 @@ idLight* idGameLocal::FindMainAmbientLight( bool a_bCreateNewIfNotFound /*= fals
 	if ( pLightEntMainAmbient )
 	{
 		m_strMainAmbientLightName = pLightEntMainAmbient->GetName();
-		gameLocal.Printf( "Found light '%s' and it's now set as the main ambient light.\n", m_strMainAmbientLightName.c_str() ); 
+		gameLocal.Printf( "Found light '%s' and it's now set as the main ambient light.\n", m_strMainAmbientLightName.c_str() );
 	}
 
 	return pLightEntMainAmbient;
@@ -8356,7 +8357,7 @@ int idGameLocal::getMsec() {
 	return time - previousTime;
 }
 
-int idGameLocal::LogSuspiciousEvent( SuspiciousEvent se, bool forceLog ) // grayman #3857   
+int idGameLocal::LogSuspiciousEvent( SuspiciousEvent se, bool forceLog ) // grayman #3857
 {
 	int index = -1;
 
@@ -8402,7 +8403,3 @@ int idGameLocal::LogSuspiciousEvent( SuspiciousEvent se, bool forceLog ) // gray
 
 	return index;
 }
-
-
-
-

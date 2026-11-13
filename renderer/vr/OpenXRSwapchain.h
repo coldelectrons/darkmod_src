@@ -19,7 +19,7 @@ class FrameBuffer;
 
 class OpenXRSwapchain {
 public:
-	virtual void Init( const idStr &name, int64_t format, int width, int height ) = 0;
+	virtual void Init( const idStr &name, int64_t format, uint32_t width, uint32_t height ) = 0;
 	virtual void Destroy() = 0;
 
 	virtual ~OpenXRSwapchain() {}

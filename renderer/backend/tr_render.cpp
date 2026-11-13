@@ -23,6 +23,7 @@ Project: The Dark Mod (http://www.thedarkmod.com/)
 #include "renderer/backend/GLSLProgram.h"
 #include "renderer/backend/GLSLUniforms.h"
 #include "renderer/backend/RenderBackend.h"
+#include "renderer/vr/OpenXRBackend.h"
 
 /*
   back end scene + lights rendering functions
@@ -207,7 +208,7 @@ RB_EnterModelDepthHack
 */
 void RB_EnterModelDepthHack( float depth ) {
 	// FIXME: this is completely broken, is it even still needed?
-	
+
 	qglDepthRange( 0.0f, 1.0f );
 
 	float	matrix[16];
@@ -368,6 +369,8 @@ void RB_BeginDrawingView( bool colorIsBackground ) {
 		qglClearStencil( 128 );
 		qglClear( GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT );
 		qglEnable( GL_DEPTH_TEST );
+		vrBackend->DrawHiddenAreaMeshToDepth();
+		vrBackend->DrawRadialDensityMaskToDepth();
 	} else {
 		qglDisable( GL_DEPTH_TEST );
 		qglDisable( GL_STENCIL_TEST );

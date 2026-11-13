@@ -14,6 +14,8 @@ Project: The Dark Mod (http://www.thedarkmod.com/)
 ******************************************************************************/
 #pragma once
 
+#include "renderer/tr_local.h"
+
 class FrameBuffer {
 public:
 	using Generator = std::function<void( FrameBuffer* )>;
@@ -40,12 +42,15 @@ public:
 
 	void BlitTo(FrameBuffer *target, GLbitfield mask, GLenum filter = GL_LINEAR);
 	void BlitToVidSize(FrameBuffer *target, GLbitfield mask, GLenum filter, int x, int y, int w, int h);
+	void BlitTo(FrameBuffer *target, uint srcX1, uint srcY1, uint srcX2, uint srcY2, uint dstX1, uint dstY1, uint dstX2, uint dstY2, GLbitfield mask, GLenum filter = GL_LINEAR);
 
 	int Width() const { return width; }
 	int Height() const { return height; }
 	int MultiSamples() const { return msaa; }
 
 	const char *Name() const { return name.c_str(); }
+
+	bool IsDefault() const { return fbo == 0; }
 
 	static void CreateDefaultFrameBuffer(FrameBuffer *fbo);
 	static void ValidateStateOfBinds(FrameBuffer *readFboExpected, FrameBuffer *drawFboExpected);
@@ -78,6 +83,7 @@ extern idCVarInt r_shadowMapSize;
 extern idCVar r_fboResolution;
 extern idCVar r_tonemap;
 
+void FB_RenderTexture( idImage *texture );
 void FB_DebugShowContents();
 void FB_ApplyViewport();
 void FB_ApplyScissor();

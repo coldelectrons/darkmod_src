@@ -20,7 +20,7 @@ class idImage;
 
 class OpenXRSwapchainGL : public OpenXRSwapchain {
 public:
-	void Init( const idStr &name, int64_t format, int width, int height ) override;
+	void Init( const idStr &name, int64_t format, uint32_t width, uint32_t height ) override;
 	void Destroy() override;
 
 	void PrepareNextImage() override;
@@ -34,14 +34,14 @@ public:
 
 private:
 	static const uint32_t INVALID_INDEX = 0xffffffff;
-	
-	int width;
-	int height;
+
+	uint32_t width;
+	uint32_t height;
 	XrSwapchain swapchain = nullptr;
 	idList<idImage *> images;
 	idList<FrameBuffer *> frameBuffers;
 	uint32_t curIndex = INVALID_INDEX;
 	XrSwapchainSubImage currentImage;
 
-	void InitFrameBuffer( FrameBuffer *fbo, idImage *image, GLuint texnum, int width, int height );
+	void InitFrameBuffer( FrameBuffer *fbo, idImage *image, GLuint texnum, uint32_t width, uint32_t height );
 };

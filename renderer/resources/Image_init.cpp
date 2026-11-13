@@ -41,7 +41,7 @@ const char *imageFilter[] = {
 };
 
 idCVar idImageManager::image_filter( "image_filter", imageFilter[1], CVAR_RENDERER | CVAR_ARCHIVE, "changes texture filtering on mipmapped images", imageFilter, idCmdSystem::ArgCompletion_String<imageFilter> );
-idCVar idImageManager::image_anisotropy( "image_anisotropy", "4", CVAR_RENDERER | CVAR_ARCHIVE, "set the maximum texture anisotropy if available" );
+idCVar idImageManager::image_anisotropy( "image_anisotropy", "8", CVAR_RENDERER | CVAR_ARCHIVE, "set the maximum texture anisotropy if available" );
 idCVar idImageManager::image_lodbias( "image_lodbias", "0", CVAR_RENDERER | CVAR_ARCHIVE, "change lod bias on mipmapped images" );
 idCVar idImageManager::image_downSize( "image_downSize", "0", CVAR_RENDERER | CVAR_ARCHIVE, "controls texture downsampling" );
 idCVar idImageManager::image_downSizeAll( "image_downSizeAll", "0", CVAR_RENDERER | CVAR_ARCHIVE, "Force all image types to use the same size limit" );
@@ -588,7 +588,7 @@ static imageBlock_t R_CosPowerCubeMap( idVec3 axis, int power, float scale, idVe
 				float ratioY = ( y + 0.5f ) / size;
 				// direction to center of texel
 				idVec3 dir = (
-					cubeMapAxes[f][2] + 
+					cubeMapAxes[f][2] +
 					cubeMapAxes[f][0] * ( 2.0f * ratioX - 1.0f ) +
 					cubeMapAxes[f][1] * ( 2.0f * ratioY - 1.0f )
 				);
@@ -949,7 +949,7 @@ void idImageAsset::Reload( bool checkPrecompressed, bool force ) {
 			if ( current <= timestamp ) {
 				return;
 			}
-		} else if ( source.generatorFunction ) { 
+		} else if ( source.generatorFunction ) {
 			// always regenerate functional images
 		} else {
 			assert( false );
@@ -1488,7 +1488,7 @@ idImageAsset * idImageManager::ImageFromSource(
 
 	// load it if we aren't in a level preload
 	// FIXME assume CPU residency as a flag that we need the image data immediately, rather than maybe load in background for GPU uploads
-	if ( image_preload.GetBool() && !insideLevelLoad || ( residency & IR_CPU ) ) { 
+	if ( image_preload.GetBool() && !insideLevelLoad || ( residency & IR_CPU ) ) {
 		image->referencedOutsideLevelLoad = true;
 		image->ActuallyLoadImage();	// check for precompressed, load is from front end
 		declManager->MediaPrint( "%ix%i %s\n", image->uploadWidth, image->uploadHeight, image->imgName.c_str() );
@@ -1735,22 +1735,22 @@ void idImageManager::Init() {
 		TD_HIGH_QUALITY 	// never compress
 	);
 
-	// create built in images
-	defaultImage = ImageFromFunction( "_default", R_DefaultImage, TF_DEFAULT, true, TR_REPEAT, TD_HIGH_QUALITY, IR_BOTH );
+	// create built in images                              name                           function                       filter      downsample repeat        depth            residency
+	defaultImage                     = ImageFromFunction( "_default",                     R_DefaultImage,                TF_DEFAULT, true,  TR_REPEAT,        TD_HIGH_QUALITY, IR_BOTH );
 	defaultImage->defaulted = true;
-	whiteImage = ImageFromFunction( "_white", R_WhiteImage, TF_DEFAULT, false, TR_REPEAT, TD_DEFAULT );
-	blackImage = ImageFromFunction( "_black", R_BlackImage, TF_DEFAULT, false, TR_REPEAT, TD_DEFAULT );
-	flatNormalMap = ImageFromFunction( "_flat", R_FlatNormalImage, TF_DEFAULT, true, TR_REPEAT, TD_BUMP );
-	ambientNormalMap = ImageFromFunction( "_ambient", R_AmbientNormalImage, TF_DEFAULT, true, TR_REPEAT, TD_BUMP );
-	alphaNotchImage = ImageFromFunction( "_alphaNotch", R_AlphaNotchImage, TF_NEAREST, false, TR_CLAMP, TD_HIGH_QUALITY );
-	fogImage = ImageFromFunction( "_fog", R_FogImage, TF_LINEAR, false, TR_CLAMP, TD_HIGH_QUALITY );
-	fogEnterImage = ImageFromFunction( "_fogEnter", R_FogEnterImage, TF_LINEAR, false, TR_CLAMP, TD_HIGH_QUALITY );
-	noFalloffImage = ImageFromFunction( "_noFalloff", R_CreateNoFalloffImage, TF_DEFAULT, false, TR_CLAMP_TO_ZERO, TD_HIGH_QUALITY );
-	ImageFromFunction( "_quadratic", R_QuadraticImage, TF_DEFAULT, false, TR_CLAMP, TD_HIGH_QUALITY );
-	whiteCubeMapImage = ImageFromFunction( "_whiteCubeMap", R_MakeWhiteCubeMap, TF_LINEAR, false, TR_REPEAT, TD_HIGH_QUALITY );
-	blackCubeMapImage = ImageFromFunction( "_blackCubeMap", R_MakeBlackCubeMap, TF_LINEAR, false, TR_REPEAT, TD_HIGH_QUALITY );
-	ImageFromFunction( "_ambientWorldDiffuseCubeMap", R_AmbientWorldDiffuseCubeMap, TF_LINEAR, false, TR_REPEAT, TD_HIGH_QUALITY );
-	ImageFromFunction( "_ambientWorldSpecularCubeMap", R_AmbientWorldSpecularCubeMap, TF_LINEAR, false, TR_REPEAT, TD_HIGH_QUALITY );
+	whiteImage                       = ImageFromFunction( "_white",                       R_WhiteImage,                  TF_DEFAULT, false, TR_REPEAT,        TD_DEFAULT               );
+	blackImage                       = ImageFromFunction( "_black",                       R_BlackImage,                  TF_DEFAULT, false, TR_REPEAT,        TD_DEFAULT               );
+	flatNormalMap                    = ImageFromFunction( "_flat",                        R_FlatNormalImage,             TF_DEFAULT, true,  TR_REPEAT,        TD_BUMP                  );
+	ambientNormalMap                 = ImageFromFunction( "_ambient",                     R_AmbientNormalImage,          TF_DEFAULT, true,  TR_REPEAT,        TD_BUMP                  );
+	alphaNotchImage                  = ImageFromFunction( "_alphaNotch",                  R_AlphaNotchImage,             TF_NEAREST, false, TR_CLAMP,         TD_HIGH_QUALITY          );
+	fogImage                         = ImageFromFunction( "_fog",                         R_FogImage,                    TF_LINEAR,  false, TR_CLAMP,         TD_HIGH_QUALITY          );
+	fogEnterImage                    = ImageFromFunction( "_fogEnter",                    R_FogEnterImage,               TF_LINEAR,  false, TR_CLAMP,         TD_HIGH_QUALITY          );
+	noFalloffImage                   = ImageFromFunction( "_noFalloff",                   R_CreateNoFalloffImage,        TF_DEFAULT, false, TR_CLAMP_TO_ZERO, TD_HIGH_QUALITY          );
+	quadraticImage                   = ImageFromFunction( "_quadratic",                   R_QuadraticImage,              TF_DEFAULT, false, TR_CLAMP,         TD_HIGH_QUALITY          );
+	whiteCubeMapImage                = ImageFromFunction( "_whiteCubeMap",                R_MakeWhiteCubeMap,            TF_LINEAR,  false, TR_REPEAT,        TD_HIGH_QUALITY          );
+	blackCubeMapImage                = ImageFromFunction( "_blackCubeMap",                R_MakeBlackCubeMap,            TF_LINEAR,  false, TR_REPEAT,        TD_HIGH_QUALITY          );
+	ambientWorldDiffuseImage         = ImageFromFunction( "_ambientWorldDiffuseCubeMap",  R_AmbientWorldDiffuseCubeMap,  TF_LINEAR,  false, TR_REPEAT,        TD_HIGH_QUALITY          );
+	ambientWorldSpecularCubeMapImage = ImageFromFunction( "_ambientWorldSpecularCubeMap", R_AmbientWorldSpecularCubeMap, TF_LINEAR,  false, TR_REPEAT,        TD_HIGH_QUALITY          );
 
 	// used for cinematic drawing
 	cinematicImage = ImageScratch( "_cinematic" );
@@ -1806,7 +1806,7 @@ void idImageManager::BeginLevelLoad() {
 	for ( int i = 0 ; i < images.Num() ; i++ ) {
 		idImageAsset *image = images[ i ]->AsAsset();
 		if ( !image )
-			continue;	
+			continue;
 		if ( com_purgeAll.GetBool() ) {
 			image->PurgeImage();
 		}

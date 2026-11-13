@@ -19,6 +19,8 @@ Project: The Dark Mod (http://www.thedarkmod.com/)
 
 #include "renderer/resources/Image.h"
 #include "Game_local.h"
+#include "renderer/tr_local.h"
+#include "renderer/vr/OpenXRBackend.h"
 
 static int MakePowerOfTwo( int num ) {
 	int		pot;
@@ -143,7 +145,7 @@ void idPlayerView::Restore( idRestoreGame *savefile ) {
 	savefile->ReadInt( dvFinishTime );
 	savefile->ReadMaterial( dvMaterial );
 	savefile->ReadInt( kickFinishTime );
-	savefile->ReadAngles( kickAngles );			
+	savefile->ReadAngles( kickAngles );
 
 	savefile->ReadMaterial( tunnelMaterial );
 	savefile->ReadMaterial( bloodSprayMaterial );
@@ -358,7 +360,7 @@ void idPlayerView::WeaponFireFeedback( const idDict *weaponDef ) {
 		kickAngles = angles;
 		int	finish = gameLocal.time + static_cast<int>(g_kickTime.GetFloat() * recoilTime);
 		kickFinishTime = finish;
-	}	
+	}
 
 }
 
@@ -393,7 +395,7 @@ idMat3 idPlayerView::ShakeAxis() const {
 ===================
 idPlayerView::AngleOffset
 
-kickVector, a world space direction that the attack should 
+kickVector, a world space direction that the attack should
 ===================
 */
 idAngles idPlayerView::AngleOffset() const {
@@ -452,14 +454,14 @@ void idPlayerView::SingleView( idUserInterface *hud, const renderView_t *view, b
 
 	// grayman #3108 - contributed by neuro & 7318
 	idVec3 diff, currentEyePos, PSOrigin, Zero;
-	
+
 	Zero.Zero();
-		
-	if ( ( gameLocal.CheckGlobalPortalSky() ) || ( gameLocal.GetCurrentPortalSkyType() == PORTALSKY_LOCAL ) ) {		
+
+	if ( ( gameLocal.CheckGlobalPortalSky() ) || ( gameLocal.GetCurrentPortalSkyType() == PORTALSKY_LOCAL ) ) {
 		// in a case of a moving portalSky
-		
+
 		currentEyePos = hackedView.vieworg;
-		
+
 		if ( gameLocal.playerOldEyePos == Zero ) {
 			// Initialize playerOldEyePos. This will only happen in one tick.
 			gameLocal.playerOldEyePos = currentEyePos;
@@ -471,20 +473,20 @@ void idPlayerView::SingleView( idUserInterface *hud, const renderView_t *view, b
 	}
 
 	if ( gameLocal.portalSkyEnt.GetEntity() && g_enablePortalSky.GetInteger() && ( gameLocal.IsPortalSkyActive() || g_stopTime.GetBool() ) ) {
-		
+
 		if ( gameLocal.GetCurrentPortalSkyType() == PORTALSKY_STANDARD ) {
 			PSOrigin = gameLocal.portalSkyOrigin;
 		}
-		
+
 		if ( gameLocal.GetCurrentPortalSkyType() == PORTALSKY_GLOBAL ) {
 			PSOrigin = gameLocal.portalSkyGlobalOrigin;
 		}
-		
+
 		if ( gameLocal.GetCurrentPortalSkyType() == PORTALSKY_LOCAL ) {
 			gameLocal.portalSkyOrigin += diff;
 			PSOrigin = gameLocal.portalSkyOrigin;
 		}
-	
+
 		gameLocal.playerOldEyePos = currentEyePos;
 		// end neuro & 7318
 
@@ -493,6 +495,7 @@ void idPlayerView::SingleView( idUserInterface *hud, const renderView_t *view, b
 		portalView.vieworg = PSOrigin;	// grayman #3108 - contributed by neuro & 7318
 //		portalView.vieworg = gameLocal.portalSkyEnt.GetEntity()->GetPhysics()->GetOrigin();
 		portalView.viewaxis = portalView.viewaxis * gameLocal.portalSkyEnt.GetEntity()->GetPhysics()->GetAxis();
+		portalView.initialViewaxis = hackedView.initialViewaxis * gameLocal.portalSkyEnt.GetEntity()->GetPhysics()->GetAxis();
 
 		// setup global fixup projection vars
 		if ( 1 ) {
@@ -520,10 +523,10 @@ void idPlayerView::SingleView( idUserInterface *hud, const renderView_t *view, b
 
 		hackedView.forceUpdate = true;				// FIX: for smoke particles not drawing when portalSky present
 	}
-	else // grayman #3108 - contributed by 7318 
+	else // grayman #3108 - contributed by 7318
 	{
 		// So if g_enablePortalSky is disabled, GlobalPortalSkies doesn't break.
-		// When g_enablePortalSky gets re-enabled, GlobalPortalSkies keeps working. 
+		// When g_enablePortalSky gets re-enabled, GlobalPortalSkies keeps working.
 		gameLocal.playerOldEyePos = currentEyePos;
 	}
 
@@ -599,8 +602,10 @@ void idPlayerView::SingleView( idUserInterface *hud, const renderView_t *view, b
 			// Tels: parm1: TODO: set here f.i. to color the material different when in gas cloud
 			// Tels: parm2: TODO: set here f.i. to color the material different when poisoned
 			// Tels: parm3: alpha value, depending on health
-			renderSystem->SetColor4( ( player->health <= 0.0f ) ? MS2SEC( gameLocal.time ) : lastDamageTime, 1.0f, 1.0f, ( player->health <= 0.0f ) ? 0.0f : alpha );
-			renderSystem->DrawStretchPic( 0.0f, 0.0f, 640.0f, 480.0f, 0.0f, 0.0f, 1.0f, 1.0f, tunnelMaterial );
+			// renderSystem->SetColor4( ( player->health <= 0.0f ) ? MS2SEC( gameLocal.time ) : lastDamageTime, 1.0f, 1.0f, ( player->health <= 0.0f ) ? 0.0f : alpha );
+			// renderSystem->DrawStretchPic( 0.0f, 0.0f, 640.0f, 480.0f, 0.0f, 0.0f, 1.0f, 1.0f, tunnelMaterial );
+			idVec4 color( ( player->health <= 0.0f ) ? MS2SEC( gameLocal.time ) : lastDamageTime, 1.0f, 1.0f, ( player->health <= 0.0f ) ? 0.0f : alpha );
+			//R_RenderScreenQuad( tunnelMaterial, color, -1, -1, 1, 1, 0.0f, 0.0f, 1.0f, 1.0f );
 		}
 	}
 
@@ -712,10 +717,10 @@ void idPlayerView::PeekView(const renderView_t *view)
 
 		hackedView.forceUpdate = true;				// FIX: for smoke particles not drawing when portalSky present
 	}
-	else // grayman #3108 - contributed by 7318 
+	else // grayman #3108 - contributed by 7318
 	{
 		// So if g_enablePortalSky is disabled, GlobalPortalSkies doesn't break.
-		// When g_enablePortalSky gets re-enabled, GlobalPortalSkies keeps working. 
+		// When g_enablePortalSky gets re-enabled, GlobalPortalSkies keeps working.
 		gameLocal.playerOldEyePos = currentEyePos;
 	}
 
@@ -799,15 +804,15 @@ void idPlayerView::DoubleVision( idUserInterface *hud, const renderView_t *view,
 	renderSystem->CropRenderSize( SCREEN_WIDTH, SCREEN_HEIGHT, true );
 
 	// greebo: Draw the single view, but skip the HUD, this is done later
-	SingleView( hud, view, false ); 
+	SingleView( hud, view, false );
 
 	renderSystem->CaptureRenderToImage( *globalImages->scratchImage );
 	renderSystem->UnCrop();
 
+	idVec4 color(1, 1, 1, 1);
 #if 0
 	// take dvMaterial = _scratch image and render it twice with small shift
 	// blend to renders in 50 : 50 proportion
-	idVec3 color(1, 1, 1);
 	renderSystem->SetColor4( color.x, color.y, color.z, 1.0f );
 	renderSystem->DrawStretchPic( 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, shift, 1-shift, 1, 0, dvMaterial );
 	renderSystem->SetColor4( color.x, color.y, color.z, 0.5f );
@@ -815,9 +820,13 @@ void idPlayerView::DoubleVision( idUserInterface *hud, const renderView_t *view,
 #else
 	// stgatilov: render whole-screen quad with custom post-processing shader
 	// shift is passed in parm0
-	renderSystem->SetColor4( shift, 0.0f, 0.0f, 0.0f );
-	renderSystem->DrawStretchPic( 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 1, 1, 0, dvMaterial );
+	// renderSystem->SetColor4( shift, 0.0f, 0.0f, 0.0f );
+	// renderSystem->DrawStretchPic( 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 1, 1, 0, dvMaterial );
 #endif
+	// VR
+	R_RenderScreenQuad( dvMaterial, color, -1, -1, 1, 1, shift, shift, 1, 1 );
+	color.w = 0.5f;
+	R_RenderScreenQuad( dvMaterial, color, -1, -1, 1, 1, 0, 0, 1-shift, 1-shift );
 
 	// Do not post-process the HUD - JC Denton
 	// Bloom related - added by Dram
@@ -912,8 +921,7 @@ void idPlayerView::ScreenFade() {
 	}
 
 	if ( fadeColor[ 3 ] != 0.0f ) {
-		renderSystem->SetColor4( fadeColor[ 0 ], fadeColor[ 1 ], fadeColor[ 2 ], fadeColor[ 3 ] );
-		renderSystem->DrawStretchPic( 0, 0, 640, 480, 0, 0, 1, 1, declManager->FindMaterial( "_white" ) );
+		R_RenderScreenQuad( declManager->FindMaterial( "_white" ), idVec4(fadeColor[0], fadeColor[1], fadeColor[2], fadeColor[3]), -1, -1, 1, 1, 0, 0, 1, 1 );
 	}
 }
 
@@ -957,7 +965,14 @@ void idPlayerView::RenderPlayerView( idUserInterface *hud )
 {
 	player->CheckForXrayOverlay();
 
-	const renderView_t *view = player->GetRenderView();
+	// VR
+	renderView_t playerRenderView = *player->GetRenderView();
+	if ( !frameData->render2D ) {
+		vrBackend->AdjustRenderView( &playerRenderView );
+	} else {
+		playerRenderView.eyeorg[0] = playerRenderView.eyeorg[1] = playerRenderView.vieworg;
+	}
+	const renderView_t *view = &playerRenderView;
 
 	if(g_skipViewEffects.GetBool())
 	{
@@ -1044,5 +1059,5 @@ idPlayerView::dnPostProcessManager::~dnPostProcessManager()
 void idPlayerView::dnPostProcessManager::Update( void )
 {
 	// duzenko: do bloom in the back renderer
-	renderSystem->PostProcess(); 
+	renderSystem->PostProcess();
 }

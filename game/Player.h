@@ -18,6 +18,7 @@ Project: The Dark Mod (http://www.thedarkmod.com/)
 #include "ButtonStateTracker.h"
 #include "Listener.h"
 #include "HudFader.h"
+#include "FrobHelper.h"
 
 class CInventoryItem;
 typedef std::shared_ptr<CInventoryItem> CInventoryItemPtr;
@@ -29,7 +30,7 @@ typedef std::shared_ptr<CInventoryWeaponItem> CInventoryWeaponItemPtr;
 ===============================================================================
 
 	Player entity.
-	
+
 ===============================================================================
 */
 
@@ -95,7 +96,7 @@ const int	FOCUS_GUI_TIME = 500;
 #ifdef PLAYER_HEARTBEAT
 // Heart rate constants
 const int DEAD_HEARTRATE = 0;			// fall to as you die
-const int LOWHEALTH_HEARTRATE_ADJ = 20; // 
+const int LOWHEALTH_HEARTRATE_ADJ = 20; //
 const int DYING_HEARTRATE = 30;			// used for volume calc when dying/dead
 const int BASE_HEARTRATE = 70;			// default
 const int ZEROSTAMINA_HEARTRATE = 115;  // no stamina
@@ -142,7 +143,7 @@ typedef enum {
 /**
 * Possible tests, for mouse gestues
 **/
-typedef enum 
+typedef enum
 {
 	MOUSETEST_UPDOWN,
 	MOUSETEST_LEFTRIGHT,
@@ -165,7 +166,7 @@ typedef struct SMouseGesture_s
 	int DeadTime; // time over which the response is dampened, can be greater than decide time
 
 	int started; // time in ms at which we started
-	idVec2 StartPos; // mouse position at which we started	
+	idVec2 StartPos; // mouse position at which we started
 	idVec2 motion; // accumulated mouse motion over the gesture
 	EMouseDir result; // result of the last gesture, using the MOUSEDIR_* enum
 
@@ -230,7 +231,7 @@ enum {
 	EIM_FROB				= BIT( 8),	// Frobbing.
 	EIM_FROB_HILIGHT		= BIT( 9),	// Frobbing AND frob hilighting (not sure if needed or if EIM_FROB can disable hilight also)
 	EIM_FROB_COMPLEX		= BIT(10),	// Frobbing of "complex" items (not a door, lever, button, etc)
-	EIM_ATTACK				= BIT(11),	// Using weapons 
+	EIM_ATTACK				= BIT(11),	// Using weapons
 	EIM_ATTACK_RANGED		= BIT(12),	// Using ranged weapons (bows)
 	EIM_WEAPON_SELECT		= BIT(13),	// Selecting weapons.
 	EIM_ITEM_USE			= BIT(14),	// Using items
@@ -270,6 +271,9 @@ public:
 	idAngles				spawnAngles;
 	idAngles				viewAngles;			// player view angles
 	idAngles				cmdAngles;			// player cmd angles
+	// VR support
+	mutable idAngles		actualViewAngles;
+	idVec3					frobAimIndicatorPos;  // world position of the small dot indicating frob aim in VR
 
 	int						buttonMask;
 	int						oldButtons;
@@ -297,9 +301,9 @@ public:
 	idScriptBool			AI_CROUCH;
 	idScriptBool			AI_ONGROUND;
 	idScriptBool			AI_ONLADDER;
-	// AI_INWATER holds a value from the enum waterLevel_t to say how deep the player is in 
+	// AI_INWATER holds a value from the enum waterLevel_t to say how deep the player is in
 	// water. Can still be used as a boolean by scripts, because WATERLEVEL_NONE == 0. SteveL #4159
-	idScriptInt				AI_INWATER; 
+	idScriptInt				AI_INWATER;
 	//idScriptBool			AI_DEAD; // is defined on idActor now
 	idScriptBool			AI_RUN;
 	idScriptBool			AI_PAIN;
@@ -342,7 +346,7 @@ public:
 
 	// ---- Frob-related members (moved from CDarkmodPlayer to here) ----
 
-	/** 
+	/**
 	* Ishtvan: The target that we initially started pressing frob on
 	* keep track of this for things that react to frob held, so we don't
 	* move from one target to another without first letting go of frob
@@ -350,7 +354,7 @@ public:
 	idEntityPtr<idEntity>	m_FrobPressedTarget;
 
 	/**
-	 * FrobEntity is NULL when no entity is highlighted. Otherwise it will point 
+	 * FrobEntity is NULL when no entity is highlighted. Otherwise it will point
 	 * to the entity which is currently highlighted.
 	 */
 	idEntityPtr<idEntity>	m_FrobEntity;
@@ -407,6 +411,10 @@ public:
 	// player is holding the creep button or toggle creep is active.
 	bool					m_CreepIntent;
 
+	// STiFU: FrobHelper alpha calculation
+	CFrobHelper				m_FrobHelper;
+
+
 	/**
 	* Hack to fix the leaning test of key-releases
 	* Timestamp to wait a few frames before testing for button release
@@ -415,7 +423,7 @@ public:
 
 
 	// #6677: Dynamic HUD
-	struct DynamicHudT 
+	struct DynamicHudT
 	{
 		void Update();
 
@@ -424,7 +432,7 @@ public:
 		/**
 		 * DynHud_FrobHelperRule1: Show while object can be interacted with
 		 */
-		HudFader frobHelper; // #4906
+		HudFader m_FrobHelper; // #4906
 
 		/**
 		 * DynHUD_WeaponRule1: Never show for weapons without ammo
@@ -469,7 +477,7 @@ public:
 	idEntityPtr<idWeapon>	weapon;
 	idUserInterface *		hud;				// MP: is NULL if not local player
 
-	
+
 
 	// greebo: This is true if the inventory HUD needs a refresh
 	bool					inventoryHUDNeedsUpdate;
@@ -558,7 +566,7 @@ public:
 	// grayman #3424 - keep track of intruder evidence when meeting friends
 	int						timeEvidenceIntruders;
 
-	// Obsttorte: 
+	// Obsttorte:
 	int						savePermissions;
 
 	/**
@@ -622,7 +630,7 @@ public:
 	float					GetJumpHinderance();
 
 	/**
-	* Sets the linear movement hinderance.  
+	* Sets the linear movement hinderance.
 	* This should be a fraction relative to max movement speed
 	* mCap values multiply together with those of other hinderances, aCap is an absolute cap
 	* for this particular hinderance.
@@ -715,14 +723,15 @@ public:
 	virtual idVec3			GetEyePosition( void ) const override;
 	virtual bool			CanGreet() override; // grayman #3338
 
-	virtual void			GetViewPos( idVec3 &origin, idMat3 &axis ) const override;
+	void					GetViewPos( idVec3 &origin, idMat3 &axis, bool decoupledAngles = false ) const;
+	void					GetFrobPos( idVec3 &origin, idMat3 &axis ) const;
 	void					OffsetThirdPersonView( float angle, float range, float height, bool clip );
 
 	bool					Give( const char *statname, const char *value );
 	void					GiveItem( const char *name );
 	void					GiveHealthPool( float amt );
 
-	// Unused. Returns always 1.0. Will be replaced by the new effects system eventually.	
+	// Unused. Returns always 1.0. Will be replaced by the new effects system eventually.
 	float					PowerUpModifier( int type );
 
 	int						SlotForWeapon( const char *weaponName );
@@ -744,7 +753,7 @@ public:
 	 */
 	CInventoryWeaponItemPtr	GetCurrentWeaponItem();
 
-	/** 
+	/**
 	 * greebo: Returns the inventory weapon item with the given name (e.g. "shortsword" or "broadhead").
 	 * This can actually return NULL if no weapon item with the given name exists.
 	 */
@@ -772,14 +781,14 @@ public:
 	int						GetBaseHeartRate( void );
 	void					UpdateAir( void );
 	void					PlaySwimmingSplashSound( const char *soundName ); // grayman #3413
-	
+
 	/**
 	* This updates the audiovisual effects when the player is underwater
 	*/
 	void					UpdateUnderWaterEffects();
 
 	/**
-	* greebo: Accessor methods for the airTicks member variable. 
+	* greebo: Accessor methods for the airTicks member variable.
 	*/
 	int						getAirTicks() const;
 	void					setAirTicks(int airTicks);
@@ -813,7 +822,7 @@ public:
 	* Ishtvan: Start tracking a mouse gesture that started when the key "impulse" was pressed
 	* Discretizes analog mouse movement into a few different gesture possibilities
 	* "Impulse" arg can also be a "button," see the UB_* enum in usercmdgen.h
-	* 
+	*
 	* Waits until the threshold mouse input is reached before deciding
 	* The test argument determines what to test for (up/down, left/right, etc)
 	*	determined by the enum EMouseTest
@@ -914,9 +923,9 @@ public:
 	/**
 	 * greebo: Performs a frob action on the given entity. The above method
 	 * PerformFrob() without arguments redirects the call to this one.
-	 * This method might be invoked by scripts as well to simulate 
+	 * This method might be invoked by scripts as well to simulate
 	 * a frob action without having the player to hit any buttons.
-	 * 
+	 *
 	 * @impulseState: the button state of the frob key. Pass EPressed if you
 	 * want to simulate a one-time frob event.
 	 *
@@ -956,7 +965,7 @@ public:
 
 
 	/**
-	 * CalculateWeakLightgem (formerly AdjustLightgem) will do the "weak" 
+	 * CalculateWeakLightgem (formerly AdjustLightgem) will do the "weak"
 	 * lightgem calculation, based on a list of lights, not using the rendershot.
 	 */
 	float	CalculateWeakLightgem();
@@ -1058,17 +1067,17 @@ public:
 
 	// Runs the (strong) lightgem calculation, returns the resulting value
 	int		ProcessLightgem(bool processing);
-	
+
 	/**
 	 * greebo: Returns the lightgem modifier value according to the currently selected inventory items
-	 * and other factors (like crouching). Returns a value between 0 and DARKMOD_LG_MAX. 
+	 * and other factors (like crouching). Returns a value between 0 and DARKMOD_LG_MAX.
 	 * This value is added to the calculated lightgem value.
 	 */
 	int GetLightgemModifier(int curLightgemValue);
 
 	/// Am I a ranged threat to the given entity (or entities in general if target is NULL)?
 	virtual float	RangedThreatTo(idEntity* target) override;
-	
+
 	// greebo: Sends a message to the HUD (used for "Game Saved" and such).
 	void			SendHUDMessage(const idStr& text);
 
@@ -1100,8 +1109,8 @@ public:
 	void			setHealthPoolTimeInterval(int newTimeInterval, float factor, int stepAmount);
 
 
-	/** 
-	* Get the current idLocation entity for the location the player is in 
+	/**
+	* Get the current idLocation entity for the location the player is in
 	**/
 	idLocationEntity *GetLocation( void );
 
@@ -1176,7 +1185,7 @@ private:
 	bool					airless;
 	int						airTics;				// set to pm_airTics at start, drops in water
 	int						lastAirDamage, lastAirCheck;
-	
+
 	bool					underWaterEffectsActive; // True, if the under water effects are in charge
 	int						underWaterGUIHandle;	 // The handle of the GUI underwater overlay
 
@@ -1185,7 +1194,7 @@ private:
 	idVec3					gibsDir;
 	int						m_InventoryOverlay;
 
-	// The GUI handle used by the in-game objectives display 
+	// The GUI handle used by the in-game objectives display
 	int						objectivesOverlay;
 
 	// The GUI handle used by the in-game inventory grid display -- Durandall #4286
@@ -1286,7 +1295,7 @@ private:
 
 	// An integer keeping track of the lightgem interleaving
 	int							m_LightgemInterleave;
-	
+
 	// grayman #597 - ignore attack button if depressed, but weapon has been lowered
 	bool						ignoreWeaponAttack;
 
@@ -1299,7 +1308,7 @@ private:
 	int						currentLoggedAccel;
 
 	idUserInterface *		cursor;
-	
+
 	// full screen guis track mouse movements directly
 	int						oldMouseX;
 	int						oldMouseY;
@@ -1369,7 +1378,9 @@ private:
 	void					SetSpectateOrigin( void );
 
 	void					UpdateLocation( void );
+public:
 	idUserInterface *		ActiveGui( void );
+private:
 	void					ExtractEmailInfo( const idStr &email, const char *scan, idStr &out );
 
 	void					UseVehicle( void );
@@ -1400,7 +1411,7 @@ private:
 	void					Event_GetCalibratedLightgemValue( void );
 	void					Event_SetAirAccelerate( float newAccel );
 	void					Event_IsAirborne( void );
-	
+
 /**
 * TDM Events
 **/
@@ -1444,7 +1455,7 @@ private:
 	void					Event_ClearMouseDeadTime( void );
 
 	/**
-	 * greebo: Sets the named lightgem modifier to a particular value. 
+	 * greebo: Sets the named lightgem modifier to a particular value.
 	 * Setting the modifier to 0 removes it from the internal list.
 	 */
 	void					Event_SetLightgemModifier(const char* modifierName, int amount);
@@ -1534,7 +1545,7 @@ private:
 	void					Event_SetActiveInventoryMapEnt(idEntity* mapEnt);
 
 	void					Event_ClearActiveInventoryMapEnt(); // grayman #3164
-	
+
 	// return the frobbed entity
 	void					Event_GetFrobbed() const;
 	// enables "frob only ents used by active inventory item" mode
@@ -1599,4 +1610,3 @@ ID_INLINE void idPlayer::SetSelfSmooth( bool b ) {
 }
 
 #endif /* !__GAME_PLAYER_H__ */
-

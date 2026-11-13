@@ -34,6 +34,13 @@ if(TDM_THIRDPARTY_ARTEFACTS)
 	include(ThirdParty/use_artefacts.cmake)
 endif()
 
+# OpenXR SDK checkout is at ThirdParty/OpenXR-SDK
+set(BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(BUILD_CONFORMANCE_TESTS OFF CACHE BOOL "" FORCE)
+set(BUILD_API_LAYERS OFF CACHE BOOL "" FORCE)
+add_subdirectory(ThirdParty/OpenXR-SDK)
+
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -121,6 +128,7 @@ elseif (MSVC)
 endif ()
 
 add_executable(TheDarkMod)
+
 find_package(Git)
 add_custom_target(version
   ${CMAKE_COMMAND} -D SRC=${CMAKE_SOURCE_DIR}/idlib/gitversion.cmake.h
@@ -293,16 +301,16 @@ if(UNIX)
 		# find_package(Xxf86vm REQUIRED)
 endif()
 
-find_package(OpenXR REQUIRED CONFIG)
-if(OpenXR_FOUND AND NOT TARGET OpenXR::OpenXR)
-    add_library(OpenXR::OpenXR INTERFACE IMPORTED)
-	set_target_properties(
-		OpenXR::OpenXR
-		PROPERTIES
-			INTERFACE_INCLUDE_DIRECTORIES "${OpenXR_INCLUDE_DIR}"
-			INTERFACE_LINK_LIBRARIES "${OpenXR_LIBRARIES}"
-	)
-endif()
+# find_package(OpenXR REQUIRED CONFIG)
+# if(OpenXR_FOUND AND NOT TARGET OpenXR::OpenXR)
+#     add_library(OpenXR::OpenXR INTERFACE IMPORTED)
+# 	set_target_properties(
+# 		OpenXR::OpenXR
+# 		PROPERTIES
+# 			INTERFACE_INCLUDE_DIRECTORIES "${OpenXR_INCLUDE_DIR}"
+# 			INTERFACE_LINK_LIBRARIES "${OpenXR_LIBRARIES}"
+# 	)
+# endif()
 
 target_link_libraries(TheDarkMod
 		ZLIB::ZLIB
@@ -319,7 +327,8 @@ target_link_libraries(TheDarkMod
 		doctest::doctest
 		tracy::tracy
 		#
-		OpenXR::OpenXR
+		# OpenXR::OpenXR
+		OpenXR::openxr_loader
 )
 if (UNIX)
 		target_link_libraries(TheDarkMod
@@ -359,7 +368,8 @@ if (COPY_EXE)
 	add_custom_command(
 			TARGET TheDarkMod POST_BUILD
 			COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:TheDarkMod> "${GAME_DIR}"
-			COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/glprogs" "${GAME_DIR}/glprogs"
+			COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/glprogs" "${GAME_DIR}/glprogs_vr"
+			COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/assets" "${GAME_DIR}"
 	)
 	if (UNIX)
 		add_custom_command(

@@ -67,18 +67,18 @@ void idGuiModel::WriteToDemo( idDemoFile *demo ) {
 		demo->WriteUnsignedChar( verts[j].color[2] );
 		demo->WriteUnsignedChar( verts[j].color[3] );
 	}
-	
+
 	i = indexes.Num();
 	demo->WriteInt( i );
 	for ( j = 0; j < i; j++ ) {
 		demo->WriteInt(indexes[j] );
 	}
-	
+
 	i = surfaces.Num();
 	demo->WriteInt( i );
 	for ( j = 0 ; j < i ; j++ ) {
 		guiModelSurface_t	*surf = &surfaces[j];
-		
+
 		demo->WriteInt( (int&)surf->material );
 		demo->WriteFloat( surf->color[0] );
 		demo->WriteFloat( surf->color[1] );
@@ -115,20 +115,20 @@ void idGuiModel::ReadFromDemo( idDemoFile *demo ) {
 		demo->ReadUnsignedChar( verts[j].color[2] );
 		demo->ReadUnsignedChar( verts[j].color[3] );
 	}
-	
+
 	i = indexes.Num();
 	demo->ReadInt( i );
 	indexes.SetNum( i, false );
 	for ( j = 0; j < i; j++ ) {
 		demo->ReadInt(indexes[j] );
 	}
-	
+
 	i = surfaces.Num();
 	demo->ReadInt( i );
 	surfaces.SetNum( i, false );
 	for ( j = 0 ; j < i ; j++ ) {
 		guiModelSurface_t	*surf = &surfaces[j];
-		
+
 		demo->ReadInt( (int&)surf->material );
 		demo->ReadFloat( surf->color[0] );
 		demo->ReadFloat( surf->color[1] );
@@ -175,6 +175,8 @@ void idGuiModel::EmitSurface( guiModelSurface_t *surf, float modelMatrix[16], fl
 		return;
 	}
 
+	tri->indexCache = vertexCache.AllocIndex( tri->indexes, ALIGN( tri->numIndexes * sizeof( tri->indexes[0] ), INDEX_CACHE_ALIGN ) );
+
 	renderEntity_t renderEntity;
 	memset( &renderEntity, 0, sizeof( renderEntity ) );
 	memcpy( renderEntity.shaderParms, surf->color, sizeof( surf->color ) );
@@ -185,7 +187,7 @@ void idGuiModel::EmitSurface( guiModelSurface_t *surf, float modelMatrix[16], fl
 	guiSpace->weaponDepthHack = depthHack;
 
 	// add the surface, which might recursively create another gui
-	R_AddDrawSurf( tri, guiSpace, &renderEntity, surf->material, tr.viewDef->scissor );
+	R_AddDrawSurf( tri, guiSpace, &renderEntity, surf->material, tr.viewDef->scissor, -1, false, true );
 
 	// the just added surface is the last in view (it was non-deferred call)
 	drawSurf_t *drawSurf = tr.viewDef->drawSurfs[tr.viewDef->numDrawSurfs - 1];
@@ -202,7 +204,7 @@ EmitToCurrentView
 void idGuiModel::EmitToCurrentView( float modelMatrix[16], bool depthHack ) {
 	float	modelViewMatrix[16];
 
-	myGlMultMatrix( modelMatrix, tr.viewDef->worldSpace.modelViewMatrix, 
+	myGlMultMatrix( modelMatrix, tr.viewDef->worldSpace.modelViewMatrix,
 			modelViewMatrix );
 
 	for ( int i = 0 ; i < surfaces.Num() ; i++ ) {
@@ -246,7 +248,7 @@ void idGuiModel::EmitFullScreen( void ) {
 		viewDef->renderView.y = tr.viewDef->renderView.y;
 		viewDef->renderView.width = tr.viewDef->renderView.width;
 		viewDef->renderView.height = tr.viewDef->renderView.height;
-		
+
 		viewDef->viewport.x1 = tr.viewDef->renderView.x;
 		viewDef->viewport.x2 = tr.viewDef->renderView.x + tr.viewDef->renderView.width;
 		viewDef->viewport.y1 = tr.viewDef->renderView.y;
@@ -351,7 +353,7 @@ void idGuiModel::SetColor( float r, float g, float b, float a ) {
 DrawStretchPic
 =============
 */
-void idGuiModel::DrawStretchPic( const idDrawVert *dverts, const glIndex_t *dindexes, int vertCount, int indexCount, const idMaterial *hShader, 
+void idGuiModel::DrawStretchPic( const idDrawVert *dverts, const glIndex_t *dindexes, int vertCount, int indexCount, const idMaterial *hShader,
 									   bool clip, float min_x, float min_y, float max_x, float max_y ) {
 	if ( !glConfig.isInitialized ) {
 		return;
@@ -482,7 +484,7 @@ void idGuiModel::DrawStretchPic( float x, float y, float w, float h, float s1, f
 		t2 -= ( t2 - t1 ) * ( y + h - 480 ) / h;
 		h = 480 - y;
 	}
-	
+
 	if ( w <= 0 || h <= 0 ) {
 		return;		// completely clipped away
 	}

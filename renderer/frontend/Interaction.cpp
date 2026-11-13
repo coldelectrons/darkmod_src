@@ -343,8 +343,8 @@ static srfTriangles_t *R_CreateLightTris( const idRenderEntityLocal *ent,
 
 	// it is debatable if non-shadowing lights should light back faces. we aren't at the moment
 	includeBackFaces = r_lightAllBackFaces.GetBool() || light->shadows == LS_MAPS ||  // need the back faces for shadows
-										light->lightShader->LightEffectsBackSides() || 
-										shader->ReceivesLightingOnBackSides() || 
+										light->lightShader->LightEffectsBackSides() ||
+										shader->ReceivesLightingOnBackSides() ||
 										ent->parms.noSelfShadow || ent->parms.noShadow;
 
 	// allocate a new surface for the lit triangles
@@ -703,10 +703,10 @@ idInteraction *idInteraction::AllocAndLink( idRenderEntityLocal *edef, idRenderL
 
 	// update the interaction table
 	bool added = renderWorld->interactionTable.Add(interaction);
-	if ( !added ) { 
-		common->Error( "idInteraction::AllocAndLink: interaction already in table" ); 
+	if ( !added ) {
+		common->Error( "idInteraction::AllocAndLink: interaction already in table" );
 	}
-	
+
 	return interaction;
 }
 
@@ -798,8 +798,8 @@ void idInteraction::UnlinkAndFree( void ) {
 	// clear the table pointer
 	idRenderWorldLocal *renderWorld = this->lightDef->world;
 	bool removed = renderWorld->interactionTable.Remove(this);
-	if ( !removed ) { 
-		common->Error( "idInteraction::UnlinkAndFree: interaction not in table" ); 
+	if ( !removed ) {
+		common->Error( "idInteraction::UnlinkAndFree: interaction not in table" );
 	}
 
 	Unlink();
@@ -1106,35 +1106,35 @@ void idInteraction::CreateInteraction( const idRenderModel *model ) {
 		// when the ambient surface isn't in view, and we can get shared vertex
 		// and shadow data from the source surface
 		sint->ambientTris = tri;
-		
+
 #if 0	// duzenko: interactions disabled this way remain disabled during the main view render
 		// nbohr1more: #4379 lightgem culling
-		if ( !HasShadows() && !shader->IsLightgemSurf() && tr.viewDef->IsLightGem() ) { 
-			continue; 
+		if ( !HasShadows() && !shader->IsLightgemSurf() && tr.viewDef->IsLightGem() ) {
+			continue;
 		}
-#endif		
+#endif
 
 		// "invisible ink" lights and shaders
 		if ( shader->Spectrum() != lightShader->Spectrum() ) {
 			continue;
 		}
-		
+
 		spectrumbypass = false;
-		
+
 		if ( (entityDef->parms.nospectrum != lightDef->parms.spectrum) && entityDef->parms.nospectrum > 0 ) {
             spectrumbypass = true;
 		}
-		
+
 		if ( (entityDef->parms.lightspectrum != lightDef->parms.spectrum) && lightShader->IsAmbientLight() ) {
 		    spectrumbypass = true;
-		}			
-		
+		}
+
 		//nbohr1more: #4956 spectrum for entities
 		if ( ( entityDef->parms.spectrum != lightDef->parms.spectrum ) && !spectrumbypass ) {
 		     continue;
 		}
-		
-		
+
+
 		// nbohr1more: #3662 fix noFog keyword
 		if ( (!shader->ReceivesFog() || entityDef->parms.noFog) && lightShader->IsFogLight() ) {
            continue;
@@ -1215,11 +1215,11 @@ static bool R_PotentiallyInsideInfiniteShadow( const srfTriangles_t *occluder,
 	// expand the bounds to account for the near clip plane, because the
 	// view could be mathematically outside, but if the near clip plane
 	// chops a volume edge, the zpass rendering would fail.
-	float	znear = r_znear.GetFloat();
+	float znear = r_znear.GetFloat() + tr.viewDef->renderView.nearZOffset;
 	if ( tr.viewDef->renderView.cramZNear ) {
 		znear *= 0.25f;
 	}
-	float	stretch = znear * 2;	// in theory, should vary with FOV
+	float stretch = znear * 2;	// in theory, should vary with FOV
 	exp[0][0] = occluder->bounds[0][0] - stretch;
 	exp[0][1] = occluder->bounds[0][1] - stretch;
 	exp[0][2] = occluder->bounds[0][2] - stretch;
@@ -1355,8 +1355,9 @@ bool idInteraction::IsPotentiallyVisible( idScreenRect &shadowScissor ) {
 	// try to cull the interaction by portals (culled away if empty scissor is returned)
 	// as a by-product, calculate more precise shadow scissor rectangle
 	shadowRect = CalcInteractionScissorRectangle( tr.viewDef->viewFrustum );
-	shadowScissor.Intersect(shadowRect);
-	if ( shadowScissor.IsEmpty() ) {
+	idScreenRect test = shadowScissor;
+	test.Intersect(shadowRect);
+	if ( test.IsEmpty() ) {
 		return false;
 	}
 
@@ -1416,7 +1417,7 @@ void idInteraction::AddActiveInteraction( void ) {
 	viewEntity_t *	vEntity;
 	idScreenRect	lightScissor;
 	idVec3			localLightOrigin;
-	idVec3			localViewOrigin;
+	// idVec3			localViewOrigin; // VR
 
 	vLight = lightDef->viewLight;
 	vEntity = entityDef->viewEntity;
@@ -1450,7 +1451,7 @@ void idInteraction::AddActiveInteraction( void ) {
 		CreateInteraction( model );
 	}
 	R_GlobalPointToLocal( vEntity->modelMatrix, lightDef->globalLightOrigin, localLightOrigin );
-	R_GlobalPointToLocal( vEntity->modelMatrix, tr.viewDef->renderView.vieworg, localViewOrigin );
+	// R_GlobalPointToLocal( vEntity->modelMatrix, tr.viewDef->renderView.vieworg, localViewOrigin ); // VR
 
 	// calculate the scissor as the intersection of the light and model rects
 	// this is used for light triangles, but not for shadow triangles
@@ -1461,7 +1462,7 @@ void idInteraction::AddActiveInteraction( void ) {
 
 	// for each surface of this entity / light interaction
 	for ( int i = 0; i < numSurfaces; i++ ) {
-		if ( r_singleSurface.GetInteger() >= 0 && i != r_singleSurface.GetInteger() ) 
+		if ( r_singleSurface.GetInteger() >= 0 && i != r_singleSurface.GetInteger() )
 			continue;
 		surfaceInteraction_t *sint = &surfaces[i];
 
@@ -1478,7 +1479,7 @@ void idInteraction::AddActiveInteraction( void ) {
 				}
 				R_FreeInteractionCullInfo( sint->cullInfo );
 			}
-			
+
 			if ( srfTriangles_t *lightTris = sint->lightTris ) {
 
 				// try to cull before adding
@@ -1595,7 +1596,15 @@ void idInteraction::AddActiveInteraction( void ) {
 			}
 
 			// see if we can avoid using the shadow volume caps
-			bool inside = R_PotentiallyInsideInfiniteShadow( sint->ambientTris, localViewOrigin, localLightOrigin );
+			// bool inside = R_PotentiallyInsideInfiniteShadow( sint->ambientTris, localViewOrigin, localLightOrigin );
+			idVec3 localViewOrigin, localLeftEyeOrigin, localRightEyeOrigin;
+			R_GlobalPointToLocal( vEntity->modelMatrix, tr.viewDef->renderView.vieworg, localViewOrigin );
+			R_GlobalPointToLocal( vEntity->modelMatrix, tr.viewDef->renderView.eyeorg[0], localLeftEyeOrigin );
+			R_GlobalPointToLocal( vEntity->modelMatrix, tr.viewDef->renderView.eyeorg[1], localRightEyeOrigin );
+			bool inside = R_PotentiallyInsideInfiniteShadow( sint->ambientTris, localViewOrigin, localLightOrigin )
+				|| R_PotentiallyInsideInfiniteShadow( sint->ambientTris, localLeftEyeOrigin, localLightOrigin )
+				|| R_PotentiallyInsideInfiniteShadow( sint->ambientTris, localRightEyeOrigin, localLightOrigin );
+			inside = true;
 
 			// stgatilov: depthbounds of shadow volumes are passed to glDepthBoundsTest in stencil shadows rendering
 			// so we cannot reduce them to shadow volume geometry, and here we restore them to light's depthbounds

@@ -173,18 +173,19 @@ bool idScreenRect::IsEmptyWithZ() const {
 R_ScreenRectFromViewFrustumBounds
 ======================
 */
-idScreenRect R_ScreenRectFromViewFrustumBounds( const idBounds &bounds ) {
+idScreenRect R_ScreenRectFromViewFrustumBounds( const idBounds &bounds, viewDef_t *viewDef ) {
 	idScreenRect screenRect;
 
-	screenRect.x1 = idMath::FtoiRound( 0.5f * ( 1.0f - bounds[1].y ) * ( tr.viewDef->viewport.x2 - tr.viewDef->viewport.x1 ) );
-	screenRect.x2 = idMath::FtoiRound( 0.5f * ( 1.0f - bounds[0].y ) * ( tr.viewDef->viewport.x2 - tr.viewDef->viewport.x1 ) );
-	screenRect.y1 = idMath::FtoiRound( 0.5f * ( 1.0f + bounds[0].z ) * ( tr.viewDef->viewport.y2 - tr.viewDef->viewport.y1 ) );
-	screenRect.y2 = idMath::FtoiRound( 0.5f * ( 1.0f + bounds[1].z ) * ( tr.viewDef->viewport.y2 - tr.viewDef->viewport.y1 ) );
+	screenRect.x1 = idMath::FtoiRound( 0.5f * ( 1.0f - bounds[1].y ) * ( viewDef->viewport.x2 - viewDef->viewport.x1 ) );
+	screenRect.x2 = idMath::FtoiRound( 0.5f * ( 1.0f - bounds[0].y ) * ( viewDef->viewport.x2 - viewDef->viewport.x1 ) );
+	screenRect.y1 = idMath::FtoiRound( 0.5f * ( 1.0f + bounds[0].z ) * ( viewDef->viewport.y2 - viewDef->viewport.y1 ) );
+	screenRect.y2 = idMath::FtoiRound( 0.5f * ( 1.0f + bounds[1].z ) * ( viewDef->viewport.y2 - viewDef->viewport.y1 ) );
+
 
 	assert( bounds[0].x <= bounds[1].x );
 	float zmin, zmax;
-	R_TransformEyeZToDepth( -bounds[0].x, tr.viewDef->projectionMatrix, zmin );
-	R_TransformEyeZToDepth( -bounds[1].x, tr.viewDef->projectionMatrix, zmax );
+	R_TransformEyeZToDepth( -bounds[0].x, viewDef->projectionMatrix, screenRect.zmin );
+	R_TransformEyeZToDepth( -bounds[1].x, viewDef->projectionMatrix, screenRect.zmax );
 	// stgatilov: slightly expand the bounds to cover floating-point errors
 	// this is similar to what idScreenRect::Expand does to scissor
 	zmin = idMath::ClampFloat( 0.0f, 1.0f, zmin - 1e-6f );
@@ -195,6 +196,10 @@ idScreenRect R_ScreenRectFromViewFrustumBounds( const idBounds &bounds ) {
 	screenRect.zmax = idMath::Fmax( zmin, zmax );
 
 	return screenRect;
+}
+
+idScreenRect R_ScreenRectFromViewFrustumBounds( const idBounds &bounds ) {
+	return R_ScreenRectFromViewFrustumBounds( bounds, tr.viewDef );
 }
 
 /*
@@ -843,7 +848,7 @@ void myGlMultMatrix( const float a[16], const float b[16], float out[16] ) {
 		__m128 Ai1 = _mm_set1_ps( a[4 * i + 1] );
 		__m128 Ai2 = _mm_set1_ps( a[4 * i + 2] );
 		__m128 Ai3 = _mm_set1_ps( a[4 * i + 3] );
-		__m128 Rix = 
+		__m128 Rix =
 		_mm_add_ps(
 			_mm_add_ps(
 				_mm_mul_ps( Ai0, B0x ),
@@ -1037,7 +1042,7 @@ void R_SetupProjection( viewDef_t &viewDef ) {
 		jitterx = jittery = 0;
 	}
 
-	float zNear = r_znear.GetFloat();
+	float zNear	= r_znear.GetFloat() + tr.viewDef->renderView.nearZOffset;
 	if ( tr.viewDef->renderView.cramZNear ) {
 		zNear *= 0.25;
 	}
@@ -1258,4 +1263,82 @@ void R_RenderView( viewDef_t &parms ) {
 
 	// restore view in case we are a subview
 	tr.viewDef = oldView;
+}
+
+void R_RenderScreenQuad( const idMaterial *material, idVec4 color, float x1, float y1, float x2, float y2, float s1, float t1, float s2, float t2 ) {
+	if ( material == nullptr || x2 <= x1 || y2 <= y1 ) {
+		return;
+	}
+
+	uint vertSize = ALIGN( sizeof(idDrawVert) * 4, VERTEX_CACHE_ALIGN );
+	uint indexSize = ALIGN( sizeof(glIndex_t) * 6, INDEX_CACHE_ALIGN );
+	idDrawVert *verts = (idDrawVert *)Mem_Alloc16( vertSize );
+	glIndex_t *indexes = (glIndex_t *)Mem_Alloc16( indexSize );
+
+	indexes[0] = 2;
+	indexes[1] = 0;
+	indexes[2] = 3;
+	indexes[3] = 1;
+	indexes[4] = 0;
+	indexes[5] = 2;
+
+	verts[0].xyz[0] = x1;
+	verts[0].xyz[1] = y1;
+	verts[0].st[0] = s1;
+	verts[0].st[1] = t1;
+	verts[1].xyz[0] = x2;
+	verts[1].xyz[1] = y1;
+	verts[1].st[0] = s2;
+	verts[1].st[1] = t1;
+	verts[2].xyz[0] = x2;
+	verts[2].xyz[1] = y2;
+	verts[2].st[0] = s2;
+	verts[2].st[1] = t2;
+	verts[3].xyz[0] = x1;
+	verts[3].xyz[1] = y2;
+	verts[3].st[0] = s1;
+	verts[3].st[1] = t2;
+	for ( int i = 0; i < 4; ++i ) {
+		verts[i].xyz[2] = -1;
+		verts[i].normal[0] = 0;
+		verts[i].normal[1] = 0;
+		verts[i].normal[2] = 1;
+		verts[i].tangents[0][0] = 1;
+		verts[i].tangents[0][1] = 0;
+		verts[i].tangents[0][2] = 0;
+		verts[i].tangents[1][0] = 0;
+		verts[i].tangents[1][1] = 1;
+		verts[i].tangents[1][2] = 0;
+	}
+
+	viewEntity_t *space = (viewEntity_t *) R_ClearedFrameAlloc( sizeof(viewEntity_t) );
+	// setup identity model and view matrices
+	space->modelMatrix[0] = space->modelMatrix[5] = space->modelMatrix[10] = space->modelMatrix[15] = 1;
+	space->modelViewMatrix[0] = space->modelViewMatrix[5] = space->modelViewMatrix[10] = space->modelViewMatrix[15] = 1;
+
+	drawSurf_t *surf = ( drawSurf_t *) R_ClearedFrameAlloc( sizeof(drawSurf_t) );
+	surf->numIndexes = 6;
+	surf->ambientCache = vertexCache.AllocVertex( verts, vertSize );
+	surf->indexCache = vertexCache.AllocIndex( indexes, indexSize );
+	surf->material = material;
+	surf->space = space;
+
+	// set up color shader params
+	float *regs = (float *)R_FrameAlloc( material->GetNumRegisters() * sizeof( float ) );
+	surf->shaderRegisters = regs;
+	float shaderParms[MAX_ENTITY_SHADER_PARMS];
+	shaderParms[0] = color.x;
+	shaderParms[1] = color.y;
+	shaderParms[2] = color.z;
+	shaderParms[3] = color.w;
+	viewDef_t viewDef;
+	material->EvaluateRegisters( regs, shaderParms, &viewDef );
+
+	drawSurfCommand_t *cmd = (drawSurfCommand_t *) R_GetCommandBuffer( sizeof(drawSurfCommand_t) );
+	cmd->commandId = RC_DRAW_SURF;
+	cmd->surf = surf;
+	cmd->projection.Identity();
+
+	Mem_Free16( verts );
+	Mem_Free16( indexes );
 }

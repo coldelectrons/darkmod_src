@@ -41,7 +41,7 @@ idCVar r_glDebugOutput( "r_glDebugOutput", "0", CVAR_RENDERER | CVAR_INTEGER | C
 idCVar r_glDebugContext( "r_glDebugContext", "0", CVAR_RENDERER | CVAR_BOOL | CVAR_ARCHIVE, "If enabled, create a GL debug context." );
 idCVar r_multiSamples( "r_multiSamples", "0", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_INTEGER, "number of antialiasing samples" );
 idCVar r_displayRefresh( "r_displayRefresh", "0", CVAR_RENDERER | CVAR_INTEGER | CVAR_NOCHEAT, "optional display refresh rate option for vid mode", 0.0f, 200.0f );
-idCVar r_fullscreen( "r_fullscreen", "2", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_INTEGER, "0 = windowed, 1 = full screen, 2 = fullscreen windowed" );
+idCVar r_fullscreen( "r_fullscreen", "0", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_INTEGER, "0 = windowed, 1 = full screen, 2 = fullscreen windowed" );
 idCVar r_singleTriangle( "r_singleTriangle", "0", CVAR_RENDERER | CVAR_BOOL, "only draw a single triangle per primitive" );
 idCVar r_checkBounds( "r_checkBounds", "0", CVAR_RENDERER | CVAR_BOOL, "compare all surface bounds with precalculated ones" );
 
@@ -71,10 +71,10 @@ idCVar r_useStateCaching( "r_useStateCaching", "1", CVAR_RENDERER | CVAR_BOOL, "
 
 idCVar r_znear( "r_znear", "3", CVAR_RENDERER | CVAR_FLOAT, "near Z clip plane distance", 0.001f, 200.0f );
 
-idCVar r_ignoreGLErrors( "r_ignoreGLErrors", 
-#ifdef _DEBUG 
-	"0" 
-#else 
+idCVar r_ignoreGLErrors( "r_ignoreGLErrors",
+#ifdef _DEBUG
+	"0"
+#else
 	"1"
 #endif
 	, CVAR_RENDERER | CVAR_BOOL, "ignore GL errors" );
@@ -136,7 +136,7 @@ idCVar r_useLightScissors( "r_useLightScissors", "1", CVAR_RENDERER | CVAR_BOOL,
 idCVar r_useLightPortalCulling( "r_useLightPortalCulling", "1", CVAR_RENDERER | CVAR_INTEGER, "0 = none, 1 = cull frustum corners to plane, 2 = exact clip the frustum faces", 0, 2, idCmdSystem::ArgCompletion_Integer<0, 2> );
 idCVar r_useEntityPortalCulling( "r_useEntityPortalCulling", "1", CVAR_RENDERER | CVAR_INTEGER, "0 = none, 1 = cull frustum corners to plane, 2 = exact clip the frustum faces", 0, 2, idCmdSystem::ArgCompletion_Integer<0, 2> );
 //anon end
-idCVar r_useClippedLightScissors( "r_useClippedLightScissors", "1", CVAR_RENDERER | CVAR_INTEGER, "0 = full screen when near clipped, 1 = exact when near clipped, 2 = exact always", 0, 2, idCmdSystem::ArgCompletion_Integer<0, 2> );
+idCVar r_useClippedLightScissors( "r_useClippedLightScissors", "2", CVAR_RENDERER | CVAR_INTEGER, "0 = full screen when near clipped, 1 = exact when near clipped, 2 = exact always", 0, 2, idCmdSystem::ArgCompletion_Integer<0, 2> );
 idCVar r_useEntityCulling( "r_useEntityCulling", "1", CVAR_RENDERER | CVAR_BOOL, "0 = none, 1 = box" );
 idCVar r_useEntityScissors( "r_useEntityScissors", "1", CVAR_RENDERER | CVAR_BOOL, "1 = use custom scissor rectangle for each entity" );
 idCVar r_useInteractionCulling( "r_useInteractionCulling", "1", CVAR_RENDERER | CVAR_BOOL, "1 = cull interactions" );
@@ -156,7 +156,7 @@ idCVarBool r_skipSubviews( "r_skipSubviews", "0", CVAR_RENDERER, "1 = don't rend
 idCVar r_skipGuiShaders( "r_skipGuiShaders", "0", CVAR_RENDERER | CVAR_INTEGER, "1 = skip all gui elements on surfaces, 2 = skip drawing but still handle events, 3 = draw but skip events", 0, 3, idCmdSystem::ArgCompletion_Integer<0, 3> );
 idCVar r_skipParticles( "r_skipParticles", "0", CVAR_RENDERER | CVAR_INTEGER, "1 = skip all particle systems", 0, 1, idCmdSystem::ArgCompletion_Integer<0, 1> );
 idCVar r_subviewOnly( "r_subviewOnly", "0", CVAR_RENDERER | CVAR_BOOL, "1 = don't render main view, allowing subviews to be debugged" );
-idCVar r_shadows( "r_shadows", "1", CVAR_RENDERER | CVAR_INTEGER  | CVAR_ARCHIVE, "1 = stencil shadows, 2 = shadow maps" );
+idCVar r_shadows( "r_shadows", "2", CVAR_RENDERER | CVAR_INTEGER  | CVAR_ARCHIVE, "1 = stencil shadows, 2 = shadow maps" );
 idCVar r_testGamma( "r_testGamma", "0", CVAR_RENDERER | CVAR_FLOAT, "if > 0 draw a grid pattern to test gamma levels", 0, 195 );
 idCVar r_testGammaBias( "r_testGammaBias", "0", CVAR_RENDERER | CVAR_FLOAT, "if > 0 draw a grid pattern to test gamma levels" );
 idCVar r_testStepGamma( "r_testStepGamma", "0", CVAR_RENDERER | CVAR_FLOAT, "if > 0 draw a grid pattern to test gamma levels" );
@@ -377,6 +377,9 @@ void R_InitOpenGL( void ) {
 		r_customHeight.SetInteger( 600 );
 	}
 
+	glConfig.windowWidth = glConfig.vidWidth;
+	glConfig.windowHeight = glConfig.vidHeight;
+
 	// input and sound systems need to be tied to the new window
 	Sys_InitInput();
 	Sys_InitPadInput();
@@ -390,16 +393,16 @@ void R_InitOpenGL( void ) {
 	glConfig.renderer_string = (const char *)qglGetString(GL_RENDERER);
 	glConfig.version_string = (const char *)qglGetString(GL_VERSION);
 
-	if ( strcmp( glConfig.vendor_string, "Intel" ) == 0 ) { 
-		glConfig.vendor = glvIntel; 
+	if ( strcmp( glConfig.vendor_string, "Intel" ) == 0 ) {
+		glConfig.vendor = glvIntel;
 	}
 
-	if ( strcmp( glConfig.vendor_string, "ATI Technologies Inc." ) == 0 ) { 
-		glConfig.vendor = glvAMD; 
+	if ( strcmp( glConfig.vendor_string, "ATI Technologies Inc." ) == 0 ) {
+		glConfig.vendor = glvAMD;
 	}
 
-	if ( strncmp( glConfig.vendor_string, "NVIDIA", 6 ) == 0 || 
-		 strncmp( glConfig.vendor_string, "Nvidia", 6 ) == 0 || 
+	if ( strncmp( glConfig.vendor_string, "NVIDIA", 6 ) == 0 ||
+		 strncmp( glConfig.vendor_string, "Nvidia", 6 ) == 0 ||
 		 strncmp( glConfig.vendor_string, "nvidia", 6 ) == 0 ) {
 		 glConfig.vendor = glvNVIDIA;
 	}
@@ -491,8 +494,8 @@ void GL_CheckErrors( void ) {
 	// check for up to 10 errors pending
 	for ( i = 0 ; i < 10 ; i++ ) {
 		err = qglGetError();
-		if ( err == GL_NO_ERROR ) { 
-			return; 
+		if ( err == GL_NO_ERROR ) {
+			return;
 		}
 		switch ( err ) {
 		case GL_INVALID_ENUM:
@@ -878,13 +881,19 @@ If ref isn't specified, the full session UpdateScreen will be done.
 */
 void R_ReadTiledPixels( int width, int height, byte *buffer, renderView_t *ref = NULL ) {
 	// include extra space for OpenGL padding to word boundaries
-	byte *temp = ( byte * )R_StaticAlloc( glConfig.vidWidth * glConfig.vidHeight * 3 );
+	// VR
+	// byte *temp = ( byte * )R_StaticAlloc( glConfig.vidWidth * glConfig.vidHeight * 3 );
+	int maxWidth = Max( glConfig.vidWidth, glConfig.windowWidth );
+	int maxHeight = Max( glConfig.vidHeight, glConfig.windowHeight );
+	byte *temp = ( byte * )R_StaticAlloc( ( maxWidth + 3 ) * maxHeight * 3 );
 
 	const int oldWidth = glConfig.vidWidth;
 	const int oldHeight = glConfig.vidHeight;
 
-	tr.tiledViewport[0] = width;
-	tr.tiledViewport[1] = height;
+	if ( ref != nullptr ) {
+		tr.tiledViewport[0] = width;
+		tr.tiledViewport[1] = height;
+	}
 
 	for ( int xo = 0 ; xo < width ; xo += oldWidth ) {
 		for ( int yo = 0 ; yo < height ; yo += oldHeight ) {
@@ -892,6 +901,7 @@ void R_ReadTiledPixels( int width, int height, byte *buffer, renderView_t *ref =
 			tr.viewportOffset[1] = -yo;
 			int w = ( xo + oldWidth > width ) ? ( width - xo ) : oldWidth;
 			int h = ( yo + oldHeight > height ) ? ( height - yo ) : oldHeight;
+			int	row = ( oldWidth * 3 + 3 ) & ~3;		// OpenGL pads to dword boundaries
 
 			if ( ref ) {
 				tr.BeginFrame( oldWidth, oldHeight );
@@ -912,7 +922,8 @@ void R_ReadTiledPixels( int width, int height, byte *buffer, renderView_t *ref =
 				session->UpdateScreen( false );
 				qglReadBuffer( GL_FRONT );
 				qglPixelStorei( GL_PACK_ALIGNMENT, 1 );	// otherwise small rows get padded to 32 bits
-				qglReadPixels( 0, 0, w, h, GL_RGB, GL_UNSIGNED_BYTE, temp );
+				qglReadPixels( 0, 0, glConfig.windowWidth, glConfig.windowHeight, GL_RGB, GL_UNSIGNED_BYTE, temp );
+				row = ( glConfig.windowWidth * 3 + 3 ) & ~3;
 			}
 
 			for ( int y = 0 ; y < h ; y++ ) {
@@ -949,7 +960,7 @@ void Screenshot_ChangeFilename( idStr& filename, const char *extension ) {
 	time( &tt );
 	struct tm * ltime = localtime( &tt );
 	strftime( thetime, sizeof( thetime ), "%Y-%m-%d %H-%M-%S", ltime );
-	
+
 	// Obsttorte: Add players view location to screenshot filename (#5819)
 	idVec3 origin;
 	idMat3 axis;
@@ -974,7 +985,7 @@ If ref == NULL, session->updateScreen will be used
 ==================
 */
 void idRenderSystemLocal::TakeScreenshot( int width, int height, const char *fileName, int blends, renderView_t *ref, bool envshot ) {
-	
+
 	takingScreenshot = true;
 
 	int	pix = width * height;
@@ -1082,7 +1093,7 @@ screenshot [filename]
 screenshot [width] [height]
 screenshot [width] [height] [samples]
 ==================
-*/
+*
 #define	MAX_BLENDS	256	// to keep the accumulation in shorts
 void R_ScreenShot_f( const idCmdArgs &args ) {
 	idStr checkname;
@@ -1093,13 +1104,13 @@ void R_ScreenShot_f( const idCmdArgs &args ) {
 
 	switch ( args.Argc() ) {
 	case 1:
-		width = glConfig.vidWidth;
-		height = glConfig.vidHeight;
+		width = glConfig.windowWidth;
+		height = glConfig.windowHeight;
 		blends = 1;
 		break;
 	case 2:
-		width = glConfig.vidWidth;
-		height = glConfig.vidHeight;
+		width = glConfig.windowWidth;
+		height = glConfig.windowHeight;
 		blends = 1;
 		checkname = args.Argv( 1 );
 		break;
@@ -1939,7 +1950,7 @@ void idRenderSystemLocal::ShutdownOpenGL( void ) {
 	// as the input is tied to the window, it should be shut down when the window
 	// is destroyed (relevant when starting a mod which also recreates window)
 	Sys_ShutdownInput();
-	
+
 	GLimp_Shutdown();
 	glConfig.isInitialized = false;
 }

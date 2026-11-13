@@ -51,7 +51,7 @@ GLSLProgramManager::GLSLProgramManager() {
 }
 
 GLSLProgramManager::~GLSLProgramManager() {
-	Shutdown();	
+	Shutdown();
 }
 
 void GLSLProgramManager::Shutdown() {
@@ -71,7 +71,7 @@ GLSLProgram * GLSLProgramManager::Load( const idStr &name, const idHashMapDict &
 			DefaultProgramInit( program, defines, name + ".vs", name + ".fs", nullptr );
 		}
 	};
-	return LoadFromGenerator( name, generator );	
+	return LoadFromGenerator( name, generator );
 }
 
 GLSLProgram * GLSLProgramManager::LoadFromFiles( const idStr &name, const idStr &vertexSource, const idHashMapDict &defines ) {
@@ -95,6 +95,15 @@ GLSLProgram * GLSLProgramManager::LoadFromFiles( const idStr &name, const idStr 
 	return LoadFromGenerator( name, generator );
 }
 
+GLSLProgram * GLSLProgramManager::LoadComputeShader( const idStr &name, const idStr &computeSource, const idHashMapDict &defines ) {
+	Generator generator = [=]( GLSLProgram *program ) {
+		program->Init();
+		program->AttachComputeShader( computeSource, defines );
+		program->Link();
+	};
+	return LoadFromGenerator( name, generator );
+}
+
 GLSLProgram * GLSLProgramManager::LoadFromGenerator( const char *name, const Generator &generator ) {
 	GLSLProgram *program = Find( name );
 	if( program != nullptr ) {
@@ -103,7 +112,7 @@ GLSLProgram * GLSLProgramManager::LoadFromGenerator( const char *name, const Gen
 			program->Destroy();
 		}
 		return program;
-	} 
+	}
 
 	program = new GLSLProgram( name, generator );
 	programs.Append( program );
@@ -127,7 +136,7 @@ void GLSLProgramManager::Reload( const char *name ) {
 }
 
 void GLSLProgramManager::ReloadAllPrograms() {
-	if ( uboHandle ) 
+	if ( uboHandle )
 		qglDeleteBuffers( 1, &uboHandle );
 	qglGenBuffers( 1, &uboHandle );
 	qglBindBuffer( GL_UNIFORM_BUFFER, uboHandle );

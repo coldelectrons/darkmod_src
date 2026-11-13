@@ -55,7 +55,7 @@ public:
 	}
 	bool		Overlaps( const idScreenRect& rect ) const {
 		// The rectangles don't overlap if
-		// one rectangle's minimum in some dimension 
+		// one rectangle's minimum in some dimension
 		// is greater than the other's maximum in
 		// that dimension.
 
@@ -81,6 +81,8 @@ public:
 };
 
 idScreenRect R_ScreenRectFromViewFrustumBounds( const idBounds &bounds );
+struct viewDef_s;
+idScreenRect R_ScreenRectFromViewFrustumBounds( const idBounds &bounds, viewDef_s *viewDef );
 void R_ShowColoredScreenRect( const idScreenRect &rect, int colorIndex );
 
 
@@ -141,6 +143,7 @@ idMat4 RB_GetShaderTextureMatrix( const float *shaderRegisters, const textureSta
 static const int DSF_VIEW_INSIDE_SHADOW	= 1;
 static const int DSF_SOFT_PARTICLE = 2; // #3878
 static const int DSF_BLOCK_SELF_SHADOWS = 4; // #6571: used when light interaction and self-shadows are computed in one draw call
+static const int DSF_GUI_SURF = 16;
 
 struct viewLight_s;
 
@@ -148,7 +151,7 @@ typedef struct drawSurf_s {
 	const srfTriangles_t	*frontendGeo;			// do not use in the backend; may be modified by the frontend
 	int						numIndexes;				// these four are frame-safe copies for backend use
 	int						numVerts;
-	vertCacheHandle_t		indexCache;				// int				
+	vertCacheHandle_t		indexCache;				// int
 	vertCacheHandle_t		ambientCache;			// idDrawVert
 	vertCacheHandle_t		shadowCache;			// shadowCache_t
 
@@ -417,7 +420,7 @@ typedef struct viewLight_s {
 	float					maxLightDistance;			// maximum distance from light origin to light volume points
 
 	bool					noFogBoundary;				// Stops fogs drawing and fogging their bounding boxes -- SteveL #3664
-	bool                    noPortalFog;				// Prevents fog from prematurely closing portals and snapping off lights, matches the material flag from Doom 3	-- nbohr1more #6282		
+	bool                    noPortalFog;				// Prevents fog from prematurely closing portals and snapping off lights, matches the material flag from Doom 3	-- nbohr1more #6282
 	bool					singleLightOnly;			// multi-light shader can't handle it
 	bool					pointLight;
 	bool					noShadows;
@@ -509,7 +512,7 @@ typedef struct viewDef_s {
 
 	idRenderWorldLocal *renderWorld;
 
-	int					viewCount;				// tr.viewCount recorded during R_RenderView 
+	int					viewCount;				// tr.viewCount recorded during R_RenderView
 	float				floatTime;
 
 	idVec3				initialViewAreaOrigin;
@@ -583,6 +586,10 @@ typedef struct viewDef_s {
 	bool				IsLightGem() const {
 		return renderView.viewID < 0;
 	}
+
+	bool				updateShadowMap;
+	idMat4				headView;
+	idMat4				eyeToHead;
 } viewDef_t;
 
 
@@ -631,10 +638,12 @@ typedef enum {
 	RC_NOP,
 	RC_DRAW_VIEW,
 	RC_DRAW_LIGHTGEM,
+	RC_DRAW_SURF,
 	RC_SET_BUFFER,
 	RC_COPY_RENDER,
 	RC_BLOOM,
-	RC_TONEMAP
+	RC_TONEMAP,
+	RC_SWAP_BUFFERS
 } renderCommand_t;
 
 struct baseCommand_t {
@@ -662,6 +671,11 @@ struct tonemapCommand_t : emptyCommand_t {
 
 struct drawLightgemCommand_t : drawSurfsCommand_t {
 	byte *dataBuffer;
+};
+
+struct drawSurfCommand_t : emptyCommand_t {
+	drawSurf_t	*surf;
+	idMat4		projection;
 };
 
 struct copyRenderCommand_t : emptyCommand_t {
@@ -710,6 +724,13 @@ typedef struct {
 	// commands can be inserted at the front if needed, as for required
 	// dynamically generated textures
 	emptyCommand_t		*cmdHead, *cmdTail;		// may be of other command type based on commandId
+
+	// VR extras
+	idVec3				mouseAimPosition;
+	float				mouseAimSize;
+	bool				render2D;  // if set, do not render in stereoscopic mode, but only to 2D overlay (e.g. cutscenes)
+	idVec3				cameraPosition;
+	idAngles			cameraAngles;
 } frameData_t;
 
 extern	frameData_t		*frameData;
@@ -969,7 +990,7 @@ public:
 	unsigned short			gammaTable[256];	// brightness / gamma modify this
 	idParallelJobList*		frontEndJobList;
 
-	bool					lockedViewAvailable = false;	// debug only: for r_lockView 
+	bool					lockedViewAvailable = false;	// debug only: for r_lockView
 	int						lockedViewSinceFrame = -1;		// ...
 	renderView_t			lockedViewData;					// ...
 
@@ -1346,6 +1367,8 @@ MAIN
 */
 
 void R_RenderView( viewDef_t &parms );
+void R_RenderScreenQuad( const idMaterial *material, idVec4 color, float x1, float y1, float x2, float y2, float s1, float t1, float s2, float t2 );
+
 
 idSphere R_BoundingSphereOfLocalBox( const idBounds &bounds, const float modelMatrix[16] );
 bool R_CullFrustumSphere( const idSphere &bounds, int numPlanes, const idPlane *planes );
@@ -1417,7 +1440,7 @@ viewEntity_t *R_SetEntityDefViewEntity( idRenderEntityLocal *def );
 viewLight_t *R_SetLightDefViewLight( idRenderLightLocal *def );
 
 void R_AddDrawSurf( const srfTriangles_t *tri, const viewEntity_t *space, const renderEntity_t *renderEntity,
-					const idMaterial *shader, const idScreenRect &scissor, const float soft_particle_radius = -1.0f, bool deferred = false ); // soft particles in #3878
+					const idMaterial *shader, const idScreenRect &scissor, const float soft_particle_radius = -1.0f, bool deferred = false, bool gui = false ); // soft particles in #3878
 
 drawSurf_t *R_PrepareLightSurf( const srfTriangles_t *tri, const viewEntity_t *space,
 					const idMaterial *shader, const idScreenRect &scissor, bool viewInsideShadow, bool blockSelfShadows );

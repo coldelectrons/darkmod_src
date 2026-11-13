@@ -275,7 +275,7 @@ void idSessionLocal::GetSaveGameList( idStrList &fileList, idList<fileTIME_T> &f
 	} else {
 		files = fileSystem->ListFiles( "savegames", ".save" );
 	}
-	
+
 	fileList = files->GetList();
 	fileSystem->FreeFileList( files );
 
@@ -404,13 +404,27 @@ void idSessionLocal::SetPbMenuGuiVars( void ) {
 
 /*
 ===============
+idSessionLocal::ToggleMenu
+===============
+*/
+void idSessionLocal::ToggleMenu() {
+	if ( guiActive != guiMainMenu ) {
+		console->Close();
+		StartMenu();
+	} else if ( mapSpawned ) {
+		ExitMenu();
+	}
+}
+
+/*
+===============
 idSessionLocal::SetMainMenuGuiVars
 ===============
 */
 void idSessionLocal::SetMainMenuGuiVars( void ) {
 
 	guiMainMenu->SetStateString( "serverlist_sel_0", "-1" );
-	guiMainMenu->SetStateString( "serverlist_selid_0", "-1" ); 
+	guiMainMenu->SetStateString( "serverlist_selid_0", "-1" );
 
 	//guiMainMenu->SetStateInt( "com_machineSpec", com_machineSpec.GetInteger() );
 
@@ -447,17 +461,17 @@ bool idSessionLocal::HandleSaveGameMenuCommand( idCmdArgs &args, int &icmd ) {
 		}
 		return true;
 	}
-	
+
 	if (!idStr::Icmp(cmd, "loadgameforced")) {
 		sessLocal.LoadGame("", idSessionLocal::eSaveConflictHandling_Ignore);
 		return true;
 	}
-	
+
 	if (!idStr::Icmp(cmd, "loadgameinitialized")) {
 		sessLocal.LoadGame("", idSessionLocal::eSaveConflictHandling_LoadMapStart);
 		return true;
 	}
-	
+
 	if ( !idStr::Icmp( cmd, "saveGame" ) ) {
 		const char *saveGameName = guiActive->State().GetString("saveGameName");
 		if ( saveGameName && saveGameName[0] ) {
@@ -476,7 +490,7 @@ bool idSessionLocal::HandleSaveGameMenuCommand( idCmdArgs &args, int &icmd ) {
 				} else {
 					file = fileSystem->OpenFileRead( saveFileName );
 				}
-				
+
 				if ( file != NULL ) {
 					fileSystem->CloseFile( file );
 
@@ -504,7 +518,17 @@ bool idSessionLocal::HandleSaveGameMenuCommand( idCmdArgs &args, int &icmd ) {
 			guiActive->StateChanged( com_frameTime );
 		}
 		return true;
-	} 
+	}
+
+	if ( !idStr::Icmp( cmd, "quickSave" ) ) {
+		extern const idStr GetNextQuicksaveFilename();
+		idStr saveGameName = GetNextQuicksaveFilename();
+		common->Printf( "Saving %s\n", saveGameName.c_str() );
+		sessLocal.SaveGame( saveGameName.c_str() );
+		SetSaveGameGuiVars();
+		guiActive->StateChanged( com_frameTime );
+		return true;
+	}
 
 	if ( !idStr::Icmp( cmd, "deleteGame" ) ) {
 		int choice = guiActive->State().GetInt( "loadgame_sel_0" );
@@ -518,7 +542,7 @@ bool idSessionLocal::HandleSaveGameMenuCommand( idCmdArgs &args, int &icmd ) {
 		}
 		return true;
 	}
-	
+
 	if ( !idStr::Icmp( cmd, "updateSaveGameInfo" ) ) {
 		int choice = guiActive->State().GetInt( "loadgame_sel_0" );
 		if ( choice >= 0 && choice < loadGameList.Num() ) {
@@ -563,6 +587,22 @@ bool idSessionLocal::HandleSaveGameMenuCommand( idCmdArgs &args, int &icmd ) {
 			idStr time = date.Right( date.Length() - tab - 1);
 			guiActive->SetStateString( "saveGameDate", date.Left( tab ) );
 			guiActive->SetStateString( "saveGameTime", time );
+		} else {
+			idStr suggestedSaveName = "save";
+			for ( int i = 0; i < 1000; ++i ) {
+				suggestedSaveName = idStr::Fmt( "save_%03d", i );
+				bool found = false;
+				for ( auto existingName : loadGameList ) {
+					if ( suggestedSaveName.Icmp( existingName ) == 0 ) {
+						found = true;
+						break;
+					}
+				}
+				if ( !found )
+					break;
+			}
+
+			guiActive->SetStateString( "saveGameName", suggestedSaveName );
 		}
 		return true;
 	}
@@ -598,7 +638,7 @@ void idSessionLocal::HandleRestartMenuCommands( const char *menuCommand ) {
 		//	}
 		//	continue;
 		//}
-		
+
 		if ( !idStr::Icmp( cmd, "restart" ) ) {
 		//	if ( !LoadGame( GetAutoSaveName( mapSpawnData.serverInfo.GetString("si_map") ) ) ) {
 		//		// If we can't load the autosave then just restart the map
@@ -663,7 +703,7 @@ void idSessionLocal::HandleMainMenuCommands( const char *menuCommand ) {
 		if ( game ) {
 			game->HandleMainMenuCommands( cmd, guiActive );
 		}
-		
+
 		if ( !idStr::Icmp( cmd, "quit" ) ) {
 			ExitMenu();
 			common->Quit();
@@ -693,7 +733,7 @@ void idSessionLocal::HandleMainMenuCommands( const char *menuCommand ) {
 		}
 
 		if (!idStr::Icmp( cmd, "LANConnect" )) {
-			int sel = guiActive->State().GetInt( "serverList_selid_0" ); 
+			int sel = guiActive->State().GetInt( "serverList_selid_0" );
 			cmdSystem->BufferCommandText( CMD_EXEC_NOW, va( "Connect %d\n", sel ) );
 			return;
 		}
@@ -937,7 +977,7 @@ void idSessionLocal::HandleMainMenuCommands( const char *menuCommand ) {
 				}
 			}
 			if ( !vcmd.Icmp( "drivar" ) ) {
-				cmdSystem->BufferCommandText( CMD_EXEC_NOW, "s_restart\n" );				
+				cmdSystem->BufferCommandText( CMD_EXEC_NOW, "s_restart\n" );
 			}
 			continue;
 		}
@@ -986,7 +1026,7 @@ void idSessionLocal::HandleMainMenuCommands( const char *menuCommand ) {
 			guiMainMenu->SetKeyBindingNames();
 			continue;
 		}
-		
+
 		if ( !idStr::Icmp( cmd, "systemCvars" ) ) {
 			guiActive->HandleNamedEvent( "cvar read render" );
 			guiActive->HandleNamedEvent( "cvar read sound" );
@@ -1070,7 +1110,7 @@ void idSessionLocal::DispatchCommand( idUserInterface *gui, const char *menuComm
 
 	if ( gui == guiMainMenu ) {
 		HandleMainMenuCommands( menuCommand );
-		//TODO on restart screen: HandleRestartMenuCommands( menuCommand ); 
+		//TODO on restart screen: HandleRestartMenuCommands( menuCommand );
 		return;
 	} else if ( gui == guiMsg ) {
 		HandleMsgCommands( menuCommand );
@@ -1190,9 +1230,9 @@ idSessionLocal::ShowMessageBox
 =================
 */
 const char* idSessionLocal::ShowMessageBox( msgBoxType_t type, const char *message, const char *title, bool wait, const char *fire_yes, const char *fire_no, bool network ) {
-	
+
 	common->DPrintf( "MessageBox: %s - %s\n", title ? title : "", message ? message : "" );
-	
+
 	if ( !BoxDialogSanityCheck() ) {
 		return NULL;
 	}
@@ -1247,7 +1287,7 @@ const char* idSessionLocal::ShowMessageBox( msgBoxType_t type, const char *messa
 			guiMsg->SetStateString( "visible_mid", "0" );
 			guiMsg->SetStateString( "visible_left", "1" );
 			guiMsg->SetStateString( "visible_right", "1" );
-			guiMsg->SetStateString( "visible_entry", "1" );			
+			guiMsg->SetStateString( "visible_entry", "1" );
 			guiMsg->HandleNamedEvent( "Prompt" );
 			break;
 		case MSG_WAIT:
@@ -1267,7 +1307,7 @@ const char* idSessionLocal::ShowMessageBox( msgBoxType_t type, const char *messa
 	guiActive->Activate( true, com_frameTime );
 	msgRunning = true;
 	msgRetIndex = -1;
-	
+
 	if ( wait ) {
 		// play one frame ignoring events so we don't get confused by parasite button releases
 		msgIgnoreButtons = true;

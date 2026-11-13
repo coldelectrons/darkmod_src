@@ -116,7 +116,7 @@ public:
 	virtual void		TimeHitch( int msec ) override;
 
 	virtual int			GetSaveGameVersion( void ) override;
-    
+
 	virtual void		RunGameTic(int timestepMs, bool minorTic) override;
 	virtual void		ActivateFrontend() override;
 	virtual void		WaitForFrontendCompletion() override;
@@ -244,7 +244,7 @@ public:
 
 
 	bool				aviCaptureMode;		// if true, screenshots will be taken and sound captured
-	idStr				aviDemoShortName;	// 
+	idStr				aviDemoShortName;	//
 	float				aviDemoFrameCount;
 	int					aviTicStart;
 
@@ -253,7 +253,7 @@ public:
 	int					numDemoFrames;		// for timeDemo and demoShot
 	int					demoTimeOffset;
 	renderView_t		currentDemoRenderView;
-	// the next one will be read when 
+	// the next one will be read when
 	// com_frameTime + demoTimeOffset > currentDemoRenderView.
 
 	// TODO: make this private (after sync networking removal and idnet tweaks)
@@ -265,14 +265,14 @@ public:
 	idListGUI *			guiMainMenu_MapList;		// easy map list handling
 	idUserInterface *	guiLoading;
 	idUserInterface *	guiTest;
-	
+
 	idUserInterface *	guiMsg;
 	idUserInterface *	guiMsgRestore;				// store the calling GUI for restore
 	idStr				msgFireBack[ 2 ];
 	bool				msgRunning;
 	int					msgRetIndex;
 	bool				msgIgnoreButtons;
-	
+
 	bool				waitingOnBind;
 
 	const idMaterial *	whiteMaterial;
@@ -367,7 +367,9 @@ public:
 	void				SetModsMenuGuiVars( void );
 	void				SetMainMenuSkin( void );
 	void				SetPbMenuGuiVars( void );
-	
+
+	void				ToggleMenu( void );
+
 private:
 	bool				BoxDialogSanityCheck( void );
 	idStr				authMsg;

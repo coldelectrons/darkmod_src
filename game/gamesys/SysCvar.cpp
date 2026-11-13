@@ -33,11 +33,11 @@ All game cvars should be defined here.
 */
 
 const char *si_gameTypeArgs[]		= { "singleplayer", "deathmatch", "Tourney", "Team DM", "Last Man", NULL };
-const char *si_readyArgs[]			= { "Not Ready", "Ready", NULL }; 
+const char *si_readyArgs[]			= { "Not Ready", "Ready", NULL };
 const char *si_spectateArgs[]		= { "Play", "Spectate", NULL };
 
 const char *ui_skinArgs[]			= { "skins/characters/player/marine_mp", "skins/characters/player/marine_mp_red", "skins/characters/player/marine_mp_blue", "skins/characters/player/marine_mp_green", "skins/characters/player/marine_mp_yellow", NULL };
-const char *ui_teamArgs[]			= { "Red", "Blue", NULL }; 
+const char *ui_teamArgs[]			= { "Red", "Blue", NULL };
 
 /**
 * DarkMod Cvars - see text description in declaration below for descriptions
@@ -97,12 +97,12 @@ idCVar cv_ai_search_type (			"tdm_ai_search_type",		"4",			CVAR_GAME | CVAR_ARCH
 idCVar cv_ai_opt_disable (			"tdm_ai_opt_disable",		"1",			CVAR_GAME | CVAR_BOOL, "If true (nonzero), AIs not in the Potentially Visible Set will be completely disabled if they have neverdormant set to 0.");
 idCVar cv_ai_opt_noanims (			"tdm_ai_opt_noanims",		"0",			CVAR_GAME | CVAR_BOOL, "If true (nonzero), AIs will not animate.");
 idCVar cv_ai_opt_novisualscan (		"tdm_ai_opt_novisualscan",	"0",			CVAR_GAME | CVAR_BOOL, "If true (nonzero), AIs not in the Potentially Visible Set will not look for enemies, not even enemy AIs.");
-idCVar cv_ai_opt_forcedormant (	
+idCVar cv_ai_opt_forcedormant (
 	"tdm_ai_opt_forcedormant",	"0", CVAR_GAME | CVAR_INTEGER,
 	"If 1, AIs will always be dormant.\n"
 	"If -1, AIs will never be dormant."
 );
-idCVar cv_ai_opt_forceopt (	
+idCVar cv_ai_opt_forceopt (
 	"tdm_ai_opt_forceopt",	"0", CVAR_GAME | CVAR_BOOL,
 	"If true, AIs will do interleaved thinking as if player is infinitely far away.\n"
 );
@@ -138,8 +138,8 @@ idCVar cv_show_health (							"tdm_show_health",					"0",            CVAR_ARCHIV
 
 idCVar cv_ai_show_aasfuncobstacle_state(		"tdm_ai_show_aasfuncobstacle_state",	"0",		CVAR_ARCHIVE | CVAR_GAME | CVAR_BOOL, "If true (nonzero), idFuncAASObstacles will show their state at spawn time and during changes." );
 
-idCVar r_customWidth( "r_customWidth", "0", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_INTEGER, "video resolution, horizontal" );
-idCVar r_customHeight( "r_customHeight", "0", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_INTEGER, "video resolution, vertical" );
+idCVar r_customWidth( "r_customWidth", "1920", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_INTEGER, "video resolution, horizontal" );
+idCVar r_customHeight( "r_customHeight", "1080", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_INTEGER, "video resolution, vertical" );
 idCVar r_aspectRatio("r_aspectRatio", "0", CVAR_INTEGER | CVAR_ARCHIVE, "Aspect ratio of view:\n0 = 4:3\n1 = 16:9\n2 = 16:10\n3 = 5:4\n4 = 16:9 TV\n5 = 21:9", 0, 5 );
 idCVar cv_tdm_widescreenmode("tdm_wideScreenMode",	"0", CVAR_ARCHIVE | CVAR_INTEGER, "The widescreen mode selected in the main menu (for internal use)." );
 idCVar cv_tdm_menu_music("tdm_menu_music",	"1", CVAR_ARCHIVE | CVAR_BOOL, "Whether to play background music in the main menu (for internal use)." );
@@ -242,7 +242,7 @@ idCVar cv_pm_creepmod(				"pm_creepmod",			"0.44",			CVAR_GAME | CVAR_FLOAT				,
 idCVar cv_pm_running_creepmod(		"pm_running_creepmod",	"0.22",			CVAR_GAME | CVAR_FLOAT				, "The multiplier used to obtain creep speed from pm_walkspeed but when Always Run is enabled, allowing players to go from full run to creep.");
 idCVar cv_pm_crouchmod(				"pm_crouchmod",			"0.54",			CVAR_GAME | CVAR_FLOAT				, "The multiplier used to obtain crouch speed from walk speed." );
 idCVar cv_pm_max_swimspeed_mod(		"pm_max_swimspeed_mod",	"1.4",			CVAR_GAME | CVAR_FLOAT				, "Maximum speed of the player when moving in >= waist deep water, relative to player walkspeed." );
-idCVar cv_pm_swimspeed_variation(	"pm_swimspeed_variation","0.6",			CVAR_GAME | CVAR_FLOAT				, "The swimspeed periodically decreases and increases by this amount.", 0.0f, 1.0f);
+idCVar cv_pm_swimspeed_variation(	"pm_swimspeed_variation","0.0",			CVAR_GAME | CVAR_FLOAT				, "The swimspeed periodically decreases and increases by this amount.", 0.0f, 1.0f);
 idCVar cv_pm_swimspeed_frequency(	"pm_swimspeed_frequency","0.8",			CVAR_GAME | CVAR_FLOAT				, "The swimspeed periodically decreases and increases by this frequency.", 0.0f, 10.0f);
 idCVar cv_pm_pushmod(				"pm_pushmod",			"0.15",			CVAR_GAME | CVAR_ARCHIVE | CVAR_FLOAT, "Alters the impulse applied when the player runs into an object. Fractional modifier that multiplies the default D3 impulse. ONLY APPLIES TO OBJECTS BEING KICKED. Default is 0.15" );
 idCVar cv_pm_push_maximpulse(		"pm_push_maximpulse",	"300",			CVAR_GAME | CVAR_ARCHIVE | CVAR_FLOAT, "This is the maximum impulse that is allowed to be propagated by the player to moveables just by kicking them. Only applies for 'lightweight' moveables below playermass*pm_push_heavy_threshold. Default is 300 units*kg per second." );
@@ -305,7 +305,7 @@ idCVar cv_pm_mantle_roll_mod("pm_mantle_roll_mod", "1.0", CVAR_GAME | CVAR_FLOAT
 idCVar cv_pm_ladderSlide_speedLimit("pm_ladderSlide_speedLimit", "400.0", CVAR_GAME | CVAR_FLOAT | CVAR_ARCHIVE, "Speed when sliding down a ladder is limited to this amount.", 0, 100000.0f);
 
 /**
-* Dark Mod Jumping 
+* Dark Mod Jumping
 **/
 idCVar cv_tdm_walk_jump_vel(			"tdm_walk_jump_vel",			"2.2",			CVAR_FLOAT, "Jump velocity multiplier when walking" );
 idCVar cv_tdm_run_jump_vel(				"tdm_run_jump_vel",				"2.5",			CVAR_FLOAT, "Jump velocity multiplier when running" );
@@ -358,7 +358,7 @@ idCVar cv_tdm_toggle_lean(			"tdm_toggle_lean",		"0",			CVAR_GAME | CVAR_ARCHIVE
 idCVar cv_pm_lean_to_valid_increments( "pm_lean_to_valid_increments", "25",		CVAR_GAME | CVAR_INTEGER, "Integer number of increments used for testing when leaning back to a valid position after a leaned clipping problem.  The higher the number, the smoother the un-lean will feel, but the higher the computation time." );
 idCVar cv_pm_lean_door_increments(	"pm_lean_door_increments", "10",			CVAR_GAME | CVAR_INTEGER, "Integer number of increments used for testing when extending a lean through a door acoustically." );
 idCVar cv_pm_lean_door_max(			"pm_lean_door_max",		"40",			CVAR_GAME | CVAR_FLOAT, "Max distance of door that may be listened through at normal incidence, in doom units." );
-idCVar cv_pm_lean_door_bounds_exp(	"pm_lean_door_bounds_exp", "8.0",		CVAR_GAME | CVAR_FLOAT, "Amount to expand the camera view bounds by when testing if the player is still pressed against a door for listening purposes (default 8.0)."); 
+idCVar cv_pm_lean_door_bounds_exp(	"pm_lean_door_bounds_exp", "8.0",		CVAR_GAME | CVAR_FLOAT, "Amount to expand the camera view bounds by when testing if the player is still pressed against a door for listening purposes (default 8.0).");
 
 // Daft Mugi #6320: Add New Lean
 idCVar cv_pm_lean_time_to_lean("pm_lean_time_to_lean", "400", CVAR_GAME | CVAR_FLOAT, "Time it takes to get to a full lean, in milliseconds.", 0.0f, 2000.0f);
@@ -534,8 +534,8 @@ idCVar cv_melee_mouse_thresh(			"tdm_melee_mouse_thresh_", "0", CVAR_GAME | CVAR
 idCVar cv_melee_mouse_decision_time(	"tdm_melee_mouse_decision_time_", "100", CVAR_GAME | CVAR_INTEGER, "In manual control mode, holding the button for this many milliseconds, an attack/parry decision is made based on mouse motion, even if it is below threshold mouse motion." );
 idCVar cv_melee_mouse_dead_time(		"tdm_melee_mouse_dead_time_", "120", CVAR_GAME | CVAR_INTEGER, "Controls how long after the button press that mouse motion is damped by the fraction in tdm_mouse_slowview.  In milliseconds." );
 idCVar cv_melee_mouse_slowview(			"tdm_melee_mouse_slowview_", "0.0", CVAR_GAME | CVAR_FLOAT, "In manual control mode, when attack/parry button is held down, the view turn rate is decreased to this fraction while the mouse motion is determining which attack/parry to make." );
-idCVar cv_melee_invert_attack(			"tdm_melee_invert_attack", "0", CVAR_GAME | CVAR_ARCHIVE | CVAR_BOOL, "If set to 1, mouse motions are inverted when controlling which attack to make." ); 
-idCVar cv_melee_invert_parry(			"tdm_melee_invert_parry", "0", CVAR_GAME | CVAR_ARCHIVE | CVAR_BOOL, "If set to 1, mouse motions are inverted when controlling which parry to make." ); 
+idCVar cv_melee_invert_attack(			"tdm_melee_invert_attack", "0", CVAR_GAME | CVAR_ARCHIVE | CVAR_BOOL, "If set to 1, mouse motions are inverted when controlling which attack to make." );
+idCVar cv_melee_invert_parry(			"tdm_melee_invert_parry", "0", CVAR_GAME | CVAR_ARCHIVE | CVAR_BOOL, "If set to 1, mouse motions are inverted when controlling which parry to make." );
 idCVar cv_melee_auto_parry(				"tdm_melee_auto_parry", "1", CVAR_GAME | CVAR_ARCHIVE | CVAR_BOOL, "If set to 1, melee parries are chosen automatically to match the enemy's attack (manual parry mode is much harder)." );
 idCVar cv_melee_forbid_auto_parry(		"tdm_melee_forbid_auto_parry", "0", CVAR_GAME | CVAR_BOOL | CVAR_ARCHIVE, "If set to 1, auto parry is forced to be off.  Only manual allowed.  Works in conjunction with the main menu, do not adjust by hand." );
 idCVar cv_melee_max_particles(			"tdm_melee_max_particles", "10", CVAR_GAME | CVAR_ARCHIVE | CVAR_INTEGER, "Max number of particles a single melee swing can generate (eye candy setting)." );
@@ -750,7 +750,7 @@ idCVar si_serverURL(				"si_serverURL",				"",				CVAR_GAME | CVAR_SERVERINFO | 
 // user info
 idCVar ui_name(						"ui_name",					"Player",		CVAR_GAME | CVAR_USERINFO | CVAR_ARCHIVE, "player name" );
 idCVar ui_skin(						"ui_skin",				ui_skinArgs[ 0 ],	CVAR_GAME | CVAR_USERINFO | CVAR_ARCHIVE, "player skin", ui_skinArgs, idCmdSystem::ArgCompletion_String<ui_skinArgs> );
-idCVar ui_team(						"ui_team",				ui_teamArgs[ 0 ],	CVAR_GAME | CVAR_USERINFO | CVAR_ARCHIVE, "player team", ui_teamArgs, idCmdSystem::ArgCompletion_String<ui_teamArgs> ); 
+idCVar ui_team(						"ui_team",				ui_teamArgs[ 0 ],	CVAR_GAME | CVAR_USERINFO | CVAR_ARCHIVE, "player team", ui_teamArgs, idCmdSystem::ArgCompletion_String<ui_teamArgs> );
 idCVar ui_autoSwitch(				"ui_autoSwitch",			"1",			CVAR_GAME | CVAR_USERINFO | CVAR_ARCHIVE | CVAR_BOOL, "auto switch weapon" );
 idCVar ui_showGun(					"ui_showGun",				"1",			CVAR_GAME | CVAR_USERINFO | CVAR_ARCHIVE | CVAR_BOOL, "show gun" );
 idCVar ui_ready(					"ui_ready",				si_readyArgs[ 0 ],	CVAR_GAME | CVAR_USERINFO, "player is ready to start playing", idCmdSystem::ArgCompletion_String<si_readyArgs> );
@@ -823,7 +823,7 @@ idCVar g_timeentities(				"g_timeEntities",			"0",			CVAR_GAME | CVAR_FLOAT, "wh
 
 idCVar g_enablePortalSky(			"g_enablePortalSky",		"2",			CVAR_GAME | CVAR_INTEGER | CVAR_ARCHIVE, "enables the portal sky: 1 - old method, 2 - new method" );
 
-	
+
 idCVar ai_debugScript(				"ai_debugScript",			"-1",			CVAR_GAME | CVAR_INTEGER, "displays script calls for the specified monster entity number" );
 idCVar ai_debugMove(				"ai_debugMove",				"0",			CVAR_GAME | CVAR_BOOL, "draws movement information for monsters" );
 idCVar ai_debugTrajectory(			"ai_debugTrajectory",		"0",			CVAR_GAME | CVAR_BOOL, "draws trajectory tests for monsters" );
@@ -832,7 +832,7 @@ idCVar ai_showCombatNodes(			"ai_showCombatNodes",		"0",			CVAR_GAME | CVAR_BOOL
 idCVar ai_showPaths(				"ai_showPaths",				"0",			CVAR_GAME | CVAR_BOOL, "draws path_* entities" );
 idCVar ai_showObstacleAvoidance(	"ai_showObstacleAvoidance",	"0",			CVAR_GAME | CVAR_INTEGER, "draws obstacle avoidance information for monsters.  if 2, draws obstacles for player, as well", 0, 2, idCmdSystem::ArgCompletion_Integer<0,2> );
 idCVar ai_blockedFailSafe(			"ai_blockedFailSafe",		"1",			CVAR_GAME | CVAR_BOOL, "enable blocked fail safe handling" );
-	
+
 idCVar g_dvTime(					"g_dvTime",					"1",			CVAR_GAME | CVAR_FLOAT, "" );
 idCVar g_dvAmplitude(				"g_dvAmplitude",			"0.001",		CVAR_GAME | CVAR_FLOAT, "" );
 idCVar g_dvFrequency(				"g_dvFrequency",			"0.5",			CVAR_GAME | CVAR_FLOAT, "" );
@@ -950,9 +950,9 @@ idCVar pm_walkbob(					"pm_walkbob",				"0.3",			CVAR_GAME | CVAR_NETWORKSYNC | 
 idCVar pm_runbob(					"pm_runbob",				"0.35",			CVAR_GAME | CVAR_NETWORKSYNC | CVAR_ARCHIVE | CVAR_FLOAT, "bob faster when running" );
 idCVar pm_runpitch(					"pm_runpitch",				"0.001",		CVAR_GAME | CVAR_NETWORKSYNC | CVAR_ARCHIVE | CVAR_FLOAT, "" );
 idCVar pm_runroll(					"pm_runroll",				"0.003",		CVAR_GAME | CVAR_NETWORKSYNC | CVAR_ARCHIVE | CVAR_FLOAT, "" );
-idCVar pm_bobup(					"pm_bobup",					"0.03",		CVAR_GAME | CVAR_NETWORKSYNC | CVAR_ARCHIVE | CVAR_FLOAT, "" );
-idCVar pm_bobpitch(					"pm_bobpitch",				"0.001",		CVAR_GAME | CVAR_NETWORKSYNC | CVAR_ARCHIVE | CVAR_FLOAT, "" );
-idCVar pm_bobroll(					"pm_bobroll",				"0.0015",		CVAR_GAME | CVAR_NETWORKSYNC | CVAR_ARCHIVE | CVAR_FLOAT, "" );
+idCVar pm_bobup(					"pm_bobup",					"0.0",		CVAR_GAME | CVAR_NETWORKSYNC | CVAR_ARCHIVE | CVAR_FLOAT, "" );
+idCVar pm_bobpitch(					"pm_bobpitch",				"0.0",		CVAR_GAME | CVAR_NETWORKSYNC | CVAR_ARCHIVE | CVAR_FLOAT, "" );
+idCVar pm_bobroll(					"pm_bobroll",				"0.0",		CVAR_GAME | CVAR_NETWORKSYNC | CVAR_ARCHIVE | CVAR_FLOAT, "" );
 
 // Daft Mugi #6310: Add simplified head bob cvar
 idCVar pm_headbob_mod(

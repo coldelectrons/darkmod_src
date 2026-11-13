@@ -20,8 +20,10 @@ Project: The Dark Mod (http://www.thedarkmod.com/)
 
 #include "renderer/backend/stages/AmbientOcclusionStage.h"
 #include "renderer/backend/GLSLProgram.h"
+#include "renderer/backend/GLSLProgramManager.h"
 #include "renderer/backend/FrameBufferManager.h"
 #include "renderer/backend/FrameBuffer.h"
+#include "renderer/vr/OpenXRBackend.h"
 
 RenderBackend renderBackendImpl;
 RenderBackend *renderBackend = &renderBackendImpl;
@@ -55,13 +57,15 @@ void RenderBackend::Init() {
 		qglBufferData( GL_PIXEL_PACK_BUFFER, DARKMOD_LG_RENDER_WIDTH * DARKMOD_LG_RENDER_WIDTH * DARKMOD_LG_BPP, nullptr, GL_STREAM_READ );
 	}
 	qglBindBuffer( GL_PIXEL_PACK_BUFFER, 0 ); // reset to default to allow sysmem ReadPixels if LG disabled
+	vrBackend->Init();
 }
 
 void RenderBackend::Shutdown() {
 	if (!initialized)
 		return;
+	vrBackend->Destroy();
 	qglDeleteBuffers( 3, lightgemPbos );
-	
+
 	tonemapStage.Shutdown();
 	frobOutlineStage.Shutdown();
 	lightPassesStage.Shutdown();
@@ -166,7 +170,7 @@ void RenderBackend::DrawLightgem( const viewDef_t *viewDef, byte *lightgemData )
 	FrameBuffer *renderFbo = frameBuffers->currentRenderFbo;
 	frameBuffers->currentRenderFbo = lightgemFbo;
 	lightgemFbo->Bind();
-	
+
 	DrawView( viewDef, false );
 
 	{
@@ -317,7 +321,10 @@ void RenderBackend::DrawShadowsAndInteractions( const viewDef_t *viewDef ) {
 	for ( viewLight_t *vLight = viewDef->viewLights; vLight; vLight = vLight->next ) {
 		if ( !interactionStage.ShouldDrawLight( vLight ) )
 			continue;
-	
+
+		// VR: recalculate light scissor for current view
+		vrBackend->UpdateLightScissor( vLight );
+
 		if ( vLight->shadows == LS_MAPS ) {
 			if ( !singlePassShadowMaps ) {
 				DrawInteractionsWithShadowMapping( viewDef, vLight );
