@@ -44,5 +44,5 @@ options:
   libcurl:
     with_ssl: "mbedtls"
   glfw:
-    with_x11: false
+    with_x11: true
     with_wayland: true
