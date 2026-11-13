@@ -63,7 +63,8 @@ void OpenXRSwapchainGL::Init( const idStr &name, int64_t format, uint32_t width,
 	images.SetNum( imageCount );
 	frameBuffers.SetNum( imageCount );
 	for ( int i = 0; i < imageCount; ++i ) {
-		images[i] = globalImages->ImageFromFunction( idStr::Fmt( "%s, image %d", name.c_str(), i), FB_RenderTexture );
+		// images[i] = globalImages->ImageFromFunction( idStr::Fmt( "%s, image %d", name.c_str(), i), FB_RenderTexture, TF_DEFAULT,  false, TR_CLAMP, TD_HIGH_QUALITY );
+		images[i] = globalImages->defaultImage;
 		frameBuffers[i] = ::frameBuffers->CreateFromGenerator( idStr::Fmt( "%s fb %d", name.c_str(), i ),
 			[=](FrameBuffer *fbo) { InitFrameBuffer( fbo, images[i], swapchainImages[i].image, width, height ); }  );
 	}
@@ -108,7 +109,7 @@ void OpenXRSwapchainGL::PrepareNextImage() {
 
 	currentImage.imageArrayIndex = 0;
 	currentImage.swapchain = swapchain;
-	currentImage.imageRect = { {0, 0}, {width, height} };
+	currentImage.imageRect = { {0, 0}, {static_cast<int>(width), static_cast<int>(height)} };
 }
 
 void OpenXRSwapchainGL::ReleaseImage() {
@@ -142,7 +143,7 @@ idImage * OpenXRSwapchainGL::CurrentImage() const {
 	return images[curIndex];
 }
 
-void OpenXRSwapchainGL::InitFrameBuffer( FrameBuffer *fbo, idImage *image, GLuint texnum, int width, int height ) {
+void OpenXRSwapchainGL::InitFrameBuffer( FrameBuffer *fbo, idImage *image, GLuint texnum, uint32_t width, uint32_t height ) {
 	image->texnum = texnum;
 	image->uploadWidth = width;
 	image->uploadHeight = height;

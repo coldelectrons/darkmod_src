@@ -23,7 +23,7 @@
 #endif
 #ifdef __linux__
 #define XR_USE_PLATFORM_XLIB 1
-#define XR_USE_PLATFORM_WAYLAND 1
+// #define XR_USE_PLATFORM_WAYLAND 1
 #endif
 #include <openxr/openxr_platform.h>
 

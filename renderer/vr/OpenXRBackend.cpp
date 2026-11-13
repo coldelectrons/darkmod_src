@@ -30,7 +30,7 @@
 OpenXRBackend xrImpl;
 OpenXRBackend *vrBackend = &xrImpl;
 
-idCVar xr_preferD3D11 ( "xr_preferD3D11", "1", CVAR_RENDERER|CVAR_BOOL|CVAR_ARCHIVE, "Use D3D11 for OpenXR session to work around a performance issue with SteamVR's OpenXR implementation" );
+idCVar xr_preferD3D11 ( "xr_preferD3D11", "0", CVAR_RENDERER|CVAR_BOOL|CVAR_ARCHIVE, "Use D3D11 for OpenXR session to work around a performance issue with SteamVR's OpenXR implementation" );
 idCVar vr_uiResolution( "vr_uiResolution", "2048", CVAR_RENDERER|CVAR_ARCHIVE|CVAR_INTEGER, "Render resolution for 2D/UI overlay" );
 idCVar vr_decoupleMouseMovement( "vr_decoupleMouseMovement", "1", CVAR_ARCHIVE|CVAR_BOOL, "If enabled, vertical mouse movement will not be reflected in the VR view" );
 idCVar vr_decoupledMouseYawAngle( "vr_decoupledMouseYawAngle", "15", CVAR_RENDERER|CVAR_FLOAT|CVAR_ARCHIVE, "horizontal mouse movement within this angle is decoupled from the view rotation" );
@@ -694,21 +694,17 @@ namespace {
 }
 #endif
 
-#if defined(__linux__) || defined(__unix__) || defined(UNIX) || defined(LINUX)
+#if defined(__linux__)
 #include "GLFW/glfw3.h"
-// XXX why do we need native exposure
-// #define GLFW_EXPOSE_NATIVE_X11 1
-#define GLFW_EXPOSE_NATIVE_WAYLAND 1
+#define GLFW_EXPOSE_NATIVE_X11 1
 #define GLFW_EXPOSE_NATIVE_GLX 1
 #include "GLFW/glfw3native.h"
-
 extern GLFWwindow *window;
 
-typedef XrGraphicsBindingOpenGLWaylandKHR XrGraphicsBindingGL;
-
-static XrGraphicsBindingOpenGLWaylandKHR Sys_CreateGraphicsBindingGL() {
-	auto *dpy = glfwGetWaylandDisplay();
-	auto *win = glfwGetWaylandWindow( window );
+typedef XrGraphicsBindingOpenGLXlibKHR XrGraphicsBindingGL;
+XrGraphicsBindingOpenGLXlibKHR Sys_CreateGraphicsBindingGL() {
+	auto *dpy = glfwGetX11Display();
+	auto win = glfwGetX11Window( window );
 	GLXContext ctx = glfwGetGLXContext( window );
 	auto glXQueryContext = (PFNGLXQUERYCONTEXTPROC)glfwGetProcAddress( "glXQueryContext" );
 	auto glXChooseFBConfig = (PFNGLXCHOOSEFBCONFIGPROC)glfwGetProcAddress( "glXChooseFBConfig" );
@@ -727,8 +723,8 @@ static XrGraphicsBindingOpenGLWaylandKHR Sys_CreateGraphicsBindingGL() {
 	XVisualInfo *visinfo = glXGetVisualFromFBConfig( dpy, fbConfig );
 	uint32_t visualId = XVisualIDFromVisual(visinfo->visual);
 
-	return {
-		XR_TYPE_GRAPHICS_BINDING_OPENGL_WAYLAND_KHR,
+	return XrGraphicsBindingOpenGLXlibKHR{
+		XR_TYPE_GRAPHICS_BINDING_OPENGL_XLIB_KHR,
 		nullptr,
 		dpy,
 		visualId,

@@ -96,12 +96,16 @@ struct RdmReconstructUniforms : GLSLUniformGroup {
 	DEFINE_UNIFORM( int, quality )
 };
 
+static imageBlock_t R_CreateReconstructionImage(  ) {
+	imageBlock_t res = imageBlock_t::Alloc2D( frameBuffers->renderWidth, frameBuffers->renderHeight );
+	return res;
+}
 void VRFoveatedRendering::Init() {
 	if ( GLAD_GL_NV_shading_rate_image ) {
 		variableRateShadingImage[0] = globalImages->ImageFromFunction( "vrsImage0", R_CreateVariableRateShadingImage, TF_DEFAULT, false, TR_CLAMP, TD_HIGH_QUALITY, IR_GRAPHICS );
 		variableRateShadingImage[1] = globalImages->ImageFromFunction( "vrsImage1", R_CreateVariableRateShadingImage, TF_DEFAULT, false, TR_CLAMP, TD_HIGH_QUALITY, IR_GRAPHICS );
 	}
-	rdmReconstructionImage = globalImages->ImageFromFunction( "rdm_reconstruct", FB_RenderTexture );
+	rdmReconstructionImage = globalImages->ImageFromFunction( "rdm_reconstruct", R_CreateReconstructionImage, TF_DEFAULT, false, TR_CLAMP, TD_HIGH_QUALITY, IR_GRAPHICS );
 	rdmReconstructionFbo = frameBuffers->CreateFromGenerator( "rdm_reconstruction_fbo", [this](FrameBuffer *fbo) {
 		int width = frameBuffers->renderWidth;
 		int height = frameBuffers->renderHeight;
