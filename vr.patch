@@ -1,0 +1,1212 @@
+diff --git a/README.md b/README.md
+new file mode 100644
+index 000000000..880f7bcfe
+--- /dev/null
++++ b/README.md
+@@ -0,0 +1,37 @@
++# The Dark Mod VR
++
++![The Dark Mod VR][logo]
++
++This is a VR mod for the free game "The Dark Mod", a Thief series inspired first-person stealth game.
++
++The mod is still a work in progress. It is currently a seated keyboard+mouse (or [Gamepad](https://github.com/fholger/thedarkmodvr/wiki/Gamepad-support)) experience only, without any roomscale or motion controller support. It is recommended to experienced VR players only, and familiarity with the base game in non-VR play is going to be helpful.
++
++A full room-scale experience is the long-term goal, but there's still a long way to go :)
++Also, I am currently spending most of my free time on [Half-Life 2 VR](https://halflife2vr.com), so
++development on The Dark Mod VR is effectively on hold. I do intend to return to this project as soon as
++I have time :)
++
++Please have a look at the [Wiki](https://github.com/fholger/thedarkmodvr/wiki) for more information and advanced settings.
++
++## Installation
++
++TheDarkMod has an installer that allows you to directly install the VR version. Follow the instructions in the Wiki page: [Installation](https://github.com/fholger/thedarkmodvr/wiki/Installation)
++
++If you already have the current [version 2.10](https://www.thedarkmod.com/posts/the-dark-mod-2-10-has-been-released/) of the base game installed, you can also head over to the [releases](https://github.com/fholger/thedarkmodvr/releases) and grab the latest version of the VR build. Extract it to your Dark Mod directory and run the VR executable.
++
++If you're feeling brave, you can also download a nightly build. Head to [AppVeyor](https://ci.appveyor.com/project/fholger/thedarkmodvr), select either the Visual Studio 2022 (for Windows) or Ubuntu 18.04 (for Linux) job, then go to the Artifacts tab and download the build.
++
++## Selecting the VR backend
++
++The Dark Mod VR uses OpenXR as its VR API, which means it can run natively on any PCVR headset. Make sure
++the preferred runtime for your headset (SteamVR, Oculus or WMR) is set as the default OpenXR runtime, then
++just launch TheDarkModVRx64.exe.
++
++## Calibrate seated position
++
++The game requests the seated reference position from your runtime, so it's important that you have it properly calibrated in your runtime, or else your view point will misalign with the actual player position and you may be stuck in a wall/ceiling, or the UI overlay will not be visible! To do so, once you've assumed your seating position:
++
++* SteamVR: choose "reset seated position". There's a button for it in the SteamVR overlay, alternatively on your desktop click on the settings icon for SteamVR, and the option should be available there in the menu.
++* Oculus: press and hold the Oculus button to recenter your view.
++
++[logo]: https://github.com/fholger/thedarkmodvr/raw/master/thedarkmodvr.png
+diff --git a/ThirdParty/artefacts/glfw/include/GLFW/glfw3native.h b/ThirdParty/artefacts/glfw/include/GLFW/glfw3native.h
+index fe74c7331..132840298 100644
+--- a/ThirdParty/artefacts/glfw/include/GLFW/glfw3native.h
++++ b/ThirdParty/artefacts/glfw/include/GLFW/glfw3native.h
+@@ -111,7 +111,7 @@ extern "C" {
+  /* NSGL is declared by Cocoa.h */
+ #endif
+ #if defined(GLFW_EXPOSE_NATIVE_GLX)
+- #include <GL/glx.h>
++ //#include <GL/glx.h>
+ #endif
+ #if defined(GLFW_EXPOSE_NATIVE_EGL)
+  #include <EGL/egl.h>
+diff --git a/ThirdParty/artefacts/openxr/bin/win64_s_vc15_rel_mt/openxr_loader.dll b/ThirdParty/artefacts/openxr/bin/win64_s_vc15_rel_mt/openxr_loader.dll
+new file mode 100644
+index 000000000..b2f0fe1c3
+Binary files /dev/null and b/ThirdParty/artefacts/openxr/bin/win64_s_vc15_rel_mt/openxr_loader.dll differ
+diff --git a/ThirdParty/artefacts/openxr/lib/lnx64_s_gcc_rel_stdcpp/libopenxr_loader.so.1 b/ThirdParty/artefacts/openxr/lib/lnx64_s_gcc_rel_stdcpp/libopenxr_loader.so.1
+new file mode 100644
+index 000000000..6593e126c
+Binary files /dev/null and b/ThirdParty/artefacts/openxr/lib/lnx64_s_gcc_rel_stdcpp/libopenxr_loader.so.1 differ
+diff --git a/ThirdParty/artefacts/openxr/lib/win64_s_vc_rel_mt/openxr_loader.lib b/ThirdParty/artefacts/openxr/lib/win64_s_vc_rel_mt/openxr_loader.lib
+new file mode 100644
+index 000000000..d7d8aa107
+Binary files /dev/null and b/ThirdParty/artefacts/openxr/lib/win64_s_vc_rel_mt/openxr_loader.lib differ
+diff --git a/ThirdParty/cmake_find_package/Findopenxr.cmake b/ThirdParty/cmake_find_package/Findopenxr.cmake
+new file mode 100644
+index 000000000..008f5c6a4
+--- /dev/null
++++ b/ThirdParty/cmake_find_package/Findopenxr.cmake
+@@ -0,0 +1,12 @@
++include(${CMAKE_CURRENT_LIST_DIR}/tdm_find_package.cmake)
++
++set(openxr_FOUND 1)
++set(openxr_INCLUDE_DIRS "${ARTEFACTS_DIR}/openxr/include")
++set(openxr_LIBRARY_DIR "${ARTEFACTS_DIR}/openxr/lib/${PACKAGE_PLATFORM}")
++if(MSVC)
++	set(openxr_LIBRARIES "${openxr_LIBRARY_DIR}/openxr_loader.lib")
++    set(openxr_BINARY "${ARTEFACTS_DIR}/openxr/bin/${PACKAGE_PLATFORM}/openxr_loader.dll")
++else()
++	set(openxr_LIBRARIES "${openxr_LIBRARY_DIR}/libopenxr_loader.so.1")
++    set(openxr_BINARY "${openxr_LIBRARIES}")
++endif()
+diff --git a/renderer/GLSLProgramManager.cpp b/renderer/GLSLProgramManager.cpp
+index 73f18dce7..d0c8c1a72 100644
+--- a/renderer/GLSLProgramManager.cpp
++++ b/renderer/GLSLProgramManager.cpp
+@@ -1,277 +1,286 @@
+-/*****************************************************************************
+-The Dark Mod GPL Source Code
+-
+-This file is part of the The Dark Mod Source Code, originally based
+-on the Doom 3 GPL Source Code as published in 2011.
+-
+-The Dark Mod Source Code is free software: you can redistribute it
+-and/or modify it under the terms of the GNU General Public License as
+-published by the Free Software Foundation, either version 3 of the License,
+-or (at your option) any later version. For details, see LICENSE.TXT.
+-
+-Project: The Dark Mod (http://www.thedarkmod.com/)
+-
+-******************************************************************************/
+-
+-#include "precompiled.h"
+-#include "GLSLProgramManager.h"
+-#include "GLSLProgram.h"
+-#include "glsl.h"
+-
+-GLSLProgramManager programManagerInstance;
+-GLSLProgramManager *programManager = &programManagerInstance;
+-
+-namespace {
+-	void DefaultProgramInit( GLSLProgram *program, idHashMapDict defines, const char *vertexSource, const char *fragmentSource = nullptr, const char *geometrySource = nullptr ) {
+-		program->Init();
+-		if( vertexSource != nullptr ) {
+-			program->AttachVertexShader( vertexSource, defines );
+-		}
+-		if( fragmentSource != nullptr ) {
+-			program->AttachFragmentShader( fragmentSource, defines );
+-		}
+-		if( geometrySource != nullptr ) {
+-			program->AttachGeometryShader( geometrySource, defines );
+-		}
+-		Attributes::Default::Bind( program );
+-		program->Link();
+-		program->Activate();
+-		int mv = program->GetUniformLocation( "u_modelViewMatrix" );
+-		if ( mv >= 0 )
+-			qglUniformMatrix4fv( mv, 1, false, mat4_identity.ToFloatPtr() );
+-		program->Deactivate();
+-	}
+-}
+-
+-
+-GLSLProgramManager::GLSLProgramManager() {
+-	// init all global program references to null
+-	Shutdown();
+-}
+-
+-GLSLProgramManager::~GLSLProgramManager() {
+-	Shutdown();	
+-}
+-
+-void GLSLProgramManager::Shutdown() {
+-	for( GLSLProgram *program : programs ) {
+-		delete program;
+-	}
+-	programs.ClearFree();
+-
+-	frobShader = nullptr;
+-	cubeMapShader = nullptr;
+-	depthShader = nullptr;
+-	fogShader = nullptr;
+-	oldStageShader = nullptr;
+-	blendShader = nullptr;
+-	stencilShadowShader = nullptr;
+-	shadowMapShader = nullptr;
+-	shadowMapMultiShader = nullptr;
+-	ambientInteractionShader = nullptr;
+-	stencilInteractionShader = nullptr;
+-	shadowMapInteractionShader = nullptr;
+-	multiLightInteractionShader = nullptr;
+-}
+-
+-GLSLProgram * GLSLProgramManager::Load( const idStr &name, const idHashMapDict &defines ) {
+-	Generator generator = [=]( GLSLProgram *program ) {
+-		if( fileSystem->FindFile( idStr("glprogs/") + name + ".gs" ) != FIND_NO ) {
+-			DefaultProgramInit( program, defines, name + ".vs", name + ".fs", name + ".gs" );
+-		} else {
+-			DefaultProgramInit( program, defines, name + ".vs", name + ".fs", nullptr );
+-		}
+-	};
+-	return LoadFromGenerator( name, generator );	
+-}
+-
+-GLSLProgram * GLSLProgramManager::LoadFromFiles( const idStr &name, const idStr &vertexSource, const idHashMapDict &defines ) {
+-	Generator generator = [=]( GLSLProgram *program ) {
+-		DefaultProgramInit( program, defines, vertexSource );
+-	};
+-	return LoadFromGenerator( name, generator );
+-}
+-
+-GLSLProgram * GLSLProgramManager::LoadFromFiles( const idStr &name, const idStr &vertexSource, const idStr &fragmentSource, const idHashMapDict &defines ) {
+-	Generator generator = [=]( GLSLProgram *program ) {
+-		DefaultProgramInit( program, defines, vertexSource, fragmentSource );
+-	};
+-	return LoadFromGenerator( name, generator );
+-}
+-
+-GLSLProgram * GLSLProgramManager::LoadFromFiles( const idStr &name, const idStr &vertexSource, const idStr &fragmentSource, const idStr &geometrySource, const idHashMapDict &defines ) {
+-	Generator generator = [=]( GLSLProgram *program ) {
+-		DefaultProgramInit( program, defines, vertexSource, fragmentSource, geometrySource );
+-	};
+-	return LoadFromGenerator( name, generator );
+-}
+-
+-GLSLProgram * GLSLProgramManager::LoadFromGenerator( const char *name, const Generator &generator ) {
+-	GLSLProgram *program = Find( name );
+-	if( program != nullptr ) {
+-		program->SetGenerator( generator );
+-		if( renderSystem->IsOpenGLRunning() ) {
+-			program->Destroy();
+-		}
+-		return program;
+-	} 
+-
+-	program = new GLSLProgram( name, generator );
+-	programs.Append( program );
+-	return program;
+-}
+-
+-GLSLProgram * GLSLProgramManager::Find( const char *name ) {
+-	for ( GLSLProgram *program : programs ) {
+-		if ( program->GetName() == name ) {
+-			return program;
+-		}
+-	}
+-	return nullptr;
+-}
+-
+-void GLSLProgramManager::Reload( const char *name ) {
+-	GLSLProgram *program = Find( name );
+-	if( program != nullptr ) {
+-		program->Regenerate();
+-	}
+-}
+-
+-void GLSLProgramManager::ReloadAllPrograms() {
+-	if ( uboHandle ) 
+-		qglDeleteBuffers( 1, &uboHandle );
+-	qglGenBuffers( 1, &uboHandle );
+-	qglBindBuffer( GL_UNIFORM_BUFFER, uboHandle );
+-	qglBindBufferBase( GL_UNIFORM_BUFFER, 0, uboHandle );
+-	for( GLSLProgram *program : programs ) {
+-		program->Regenerate();
+-	}
+-}
+-
+-
+-// INITIALIZE BUILTIN PROGRAMS HERE
+-
+-namespace {
+-	void InitInteractionShader( GLSLProgram *program ) {
+-		idHashMapDict defines;
+-		// TODO: set some defines based on cvars
+-		defines.Set( "SOFT", "1" );
+-		DefaultProgramInit( program, defines, "interaction.vs", "interaction.fs" );
+-		program->Validate();
+-	}
+-
+-	void InitDepthShader( GLSLProgram *program ) {
+-		DefaultProgramInit( program, {}, "depthAlpha.vs", "depthAlpha.fs" );
+-		program->Activate();
+-		GLSLUniform_sampler( program, "u_tex0" ).Set( 0 );
+-		program->GetUniformGroup<Uniforms::Global>()->textureMatrix.Set( mat4_identity );
+-		program->Validate();
+-	}
+-
+-	void InitFogShader( GLSLProgram *program ) {
+-		DefaultProgramInit( program, {}, "fog.vs", "fog.fs" );
+-		program->Activate();
+-		GLSLUniform_sampler( program, "u_texture0" ).Set( 0 );
+-		GLSLUniform_sampler( program, "u_texture1" ).Set( 1 );
+-		program->GetUniformGroup<Uniforms::Global>()->textureMatrix.Set( mat4_identity );
+-		program->Validate();
+-	}
+-
+-	void InitOldStageShader( GLSLProgram *program ) {
+-		DefaultProgramInit( program, {}, "oldStage.vs", "oldStage.fs" );
+-		program->Activate();
+-		GLSLUniform_sampler( program, "u_tex0" ).Set( 0 );
+-		program->GetUniformGroup<Uniforms::Global>()->textureMatrix.Set( mat4_identity );
+-		program->Validate();
+-	}
+-
+-	void InitBlendShader( GLSLProgram *program ) {
+-		DefaultProgramInit( program, {}, "blend.vs", "blend.fs" );
+-		program->Activate();
+-		GLSLUniform_sampler( program, "u_texture0" ).Set( 0 );
+-		GLSLUniform_sampler( program, "u_texture1" ).Set( 1 );
+-		program->GetUniformGroup<Uniforms::Global>()->textureMatrix.Set( mat4_identity );
+-		program->Validate();
+-	}
+-
+-	void InitShadowMapShader( GLSLProgram *program ) {
+-		DefaultProgramInit( program, {}, program->GetName() + ".vs", program->GetName() + ".fs"/*, program->GetName() + ".gs"*/ );
+-		Uniforms::Depth *depthUniforms = program->GetUniformGroup<Uniforms::Depth>();
+-		depthUniforms->instances = 6;
+-		depthUniforms->acceptsTranslucent = true; //duzenko: wait, what?
+-		program->Validate();
+-	}
+-
+-	void InitSoftParticleShader( GLSLProgram *program ) {
+-		DefaultProgramInit( program, {}, program->GetName() + ".vs", program->GetName() + ".fs" );
+-		program->Activate();
+-		GLSLUniform_sampler( program, "u_texture0" ).Set( 0 );
+-		GLSLUniform_sampler( program, "u_texture1" ).Set( 1 );
+-		program->Validate();
+-	}
+-
+-	void InitSamplerBindingsForBumpShaders( GLSLProgram *program ) {
+-		GLSLUniform_sampler( program, "u_normalTexture" ).Set( 1 );
+-		program->GetUniformGroup<Uniforms::Global>()->textureMatrix.Set( mat4_identity );
+-}
+-
+-	GLSLProgram *LoadFromBaseNameWithCustomizer( const idStr &baseName, const std::function<void(GLSLProgram*)> customizer) {
+-		return programManager->LoadFromGenerator( baseName, [=]( GLSLProgram *program ) {
+-			idStr geometrySource = baseName + ".gs";
+-			if( fileSystem->FindFile( idStr( "glprogs/" ) + baseName + ".gs" ) != FIND_NO ) {
+-				DefaultProgramInit( program, {}, baseName + ".vs", baseName + ".fs", baseName + ".gs" );
+-			} else {
+-				DefaultProgramInit( program, {}, baseName + ".vs", baseName + ".fs", nullptr );
+-			}
+-			program->Activate();
+-			customizer( program );
+-			program->Validate();
+-		});		
+-	}
+-
+-	GLSLProgram *LoadInteractionShader( const idStr &name, const idStr &baseName, bool ambient ) {
+-		return programManager->LoadFromGenerator( name, [=]( GLSLProgram *program ) {
+-			idHashMapDict defines;
+-			DefaultProgramInit( program, defines, baseName + ".vs", baseName + ".fs" );
+-			program->Activate();
+-			Uniforms::Interaction *interactionUniforms = program->GetUniformGroup<Uniforms::Interaction>();
+-			interactionUniforms->ambient = ambient;
+-			// static bindings
+-			interactionUniforms->normalTexture.Set( 0 );
+-			interactionUniforms->lightFalloffTexture.Set( 1 );
+-			interactionUniforms->lightProjectionTexture.Set( 2 );
+-			interactionUniforms->diffuseTexture.Set( 3 );
+-			interactionUniforms->specularTexture.Set( 4 );
+-
+-			// can't have sampler2D, usampler2D, samplerCube have the same TMU index
+-			interactionUniforms->lightProjectionCubemap.Set( 5 );
+-			interactionUniforms->shadowMap.Set( 6 );
+-			interactionUniforms->stencilTexture.Set( 7 );
+-			interactionUniforms->lightFalloffCubemap.Set( 8 );
+-			program->Validate();
+-		} );
+-	}
+-}
+-
+-void GLSLProgramManager::Init() {
+-	cubeMapShader = LoadFromBaseNameWithCustomizer( "cubeMap", InitSamplerBindingsForBumpShaders );
+-	bumpyEnvironment = LoadFromBaseNameWithCustomizer( "bumpyEnvironment", InitSamplerBindingsForBumpShaders );
+-	depthShader = LoadFromGenerator( "depthAlpha" , InitDepthShader );
+-	fogShader = LoadFromGenerator( "fog", InitFogShader );
+-	oldStageShader = LoadFromGenerator( "oldStage", InitOldStageShader );
+-	blendShader = LoadFromGenerator( "blend", InitBlendShader );
+-	stencilShadowShader = Load( "stencilshadow" );
+-	shadowMapShader = LoadFromGenerator( "shadowMapA", InitShadowMapShader );
+-	shadowMapMultiShader = LoadFromGenerator( "shadowMapN", InitShadowMapShader );
+-	shadowMapMultiGShader = LoadFromGenerator( "shadowMapNG", InitShadowMapShader );
+-	ambientInteractionShader = LoadInteractionShader( "ambientInteraction", "ambientInteraction", true );
+-	stencilInteractionShader = LoadInteractionShader( "interactionStencil", "interactionStencil", false );
+-	shadowMapInteractionShader = LoadInteractionShader( "interactionShadowMaps", "interactionShadowMaps", false );
+-	multiLightInteractionShader = LoadInteractionShader( "interactionMultiLight", "interactionMultiLight", false );
+-	frobShader = Load( "frob" );
+-	softParticleShader = LoadFromGenerator( "soft_particle", InitSoftParticleShader );
+-	toneMapShader = Load( "tonemap" );
+-	gaussianBlurShader = LoadFromFiles( "gaussian_blur", "fullscreen_tri.vert.glsl", "gaussian_blur.frag.glsl" );
+-	volumetricLightShader = Load( "volumetric" );
+-}
+-
++/*****************************************************************************
++The Dark Mod GPL Source Code
++
++This file is part of the The Dark Mod Source Code, originally based
++on the Doom 3 GPL Source Code as published in 2011.
++
++The Dark Mod Source Code is free software: you can redistribute it
++and/or modify it under the terms of the GNU General Public License as
++published by the Free Software Foundation, either version 3 of the License,
++or (at your option) any later version. For details, see LICENSE.TXT.
++
++Project: The Dark Mod (http://www.thedarkmod.com/)
++
++******************************************************************************/
++
++#include "precompiled.h"
++#include "GLSLProgramManager.h"
++#include "GLSLProgram.h"
++#include "glsl.h"
++
++GLSLProgramManager programManagerInstance;
++GLSLProgramManager *programManager = &programManagerInstance;
++
++namespace {
++	void DefaultProgramInit( GLSLProgram *program, idHashMapDict defines, const char *vertexSource, const char *fragmentSource = nullptr, const char *geometrySource = nullptr ) {
++		program->Init();
++		if( vertexSource != nullptr ) {
++			program->AttachVertexShader( vertexSource, defines );
++		}
++		if( fragmentSource != nullptr ) {
++			program->AttachFragmentShader( fragmentSource, defines );
++		}
++		if( geometrySource != nullptr ) {
++			program->AttachGeometryShader( geometrySource, defines );
++		}
++		Attributes::Default::Bind( program );
++		program->Link();
++		program->Activate();
++		int mv = program->GetUniformLocation( "u_modelViewMatrix" );
++		if ( mv >= 0 )
++			qglUniformMatrix4fv( mv, 1, false, mat4_identity.ToFloatPtr() );
++		program->Deactivate();
++	}
++}
++
++
++GLSLProgramManager::GLSLProgramManager() {
++	// init all global program references to null
++	Shutdown();
++}
++
++GLSLProgramManager::~GLSLProgramManager() {
++	Shutdown();
++}
++
++void GLSLProgramManager::Shutdown() {
++	for( GLSLProgram *program : programs ) {
++		delete program;
++	}
++	programs.ClearFree();
++
++	frobShader = nullptr;
++	cubeMapShader = nullptr;
++	depthShader = nullptr;
++	fogShader = nullptr;
++	oldStageShader = nullptr;
++	blendShader = nullptr;
++	stencilShadowShader = nullptr;
++	shadowMapShader = nullptr;
++	shadowMapMultiShader = nullptr;
++	ambientInteractionShader = nullptr;
++	stencilInteractionShader = nullptr;
++	shadowMapInteractionShader = nullptr;
++	multiLightInteractionShader = nullptr;
++}
++
++GLSLProgram * GLSLProgramManager::Load( const idStr &name, const idHashMapDict &defines ) {
++	Generator generator = [=]( GLSLProgram *program ) {
++		if( fileSystem->FindFile( idStr("glprogs_vr/") + name + ".gs" ) != FIND_NO ) {
++			DefaultProgramInit( program, defines, name + ".vs", name + ".fs", name + ".gs" );
++		} else {
++			DefaultProgramInit( program, defines, name + ".vs", name + ".fs", nullptr );
++		}
++	};
++	return LoadFromGenerator( name, generator );
++}
++
++GLSLProgram * GLSLProgramManager::LoadFromFiles( const idStr &name, const idStr &vertexSource, const idHashMapDict &defines ) {
++	Generator generator = [=]( GLSLProgram *program ) {
++		DefaultProgramInit( program, defines, vertexSource );
++	};
++	return LoadFromGenerator( name, generator );
++}
++
++GLSLProgram * GLSLProgramManager::LoadFromFiles( const idStr &name, const idStr &vertexSource, const idStr &fragmentSource, const idHashMapDict &defines ) {
++	Generator generator = [=]( GLSLProgram *program ) {
++		DefaultProgramInit( program, defines, vertexSource, fragmentSource );
++	};
++	return LoadFromGenerator( name, generator );
++}
++
++GLSLProgram * GLSLProgramManager::LoadFromFiles( const idStr &name, const idStr &vertexSource, const idStr &fragmentSource, const idStr &geometrySource, const idHashMapDict &defines ) {
++	Generator generator = [=]( GLSLProgram *program ) {
++		DefaultProgramInit( program, defines, vertexSource, fragmentSource, geometrySource );
++	};
++	return LoadFromGenerator( name, generator );
++}
++
++GLSLProgram * GLSLProgramManager::LoadComputeShader( const idStr &name, const idStr &computeSource, const idHashMapDict &defines ) {
++	Generator generator = [=]( GLSLProgram *program ) {
++		program->Init();
++		program->AttachComputeShader( computeSource, defines );
++		program->Link();
++	};
++	return LoadFromGenerator( name, generator );
++}
++
++GLSLProgram * GLSLProgramManager::LoadFromGenerator( const char *name, const Generator &generator ) {
++	GLSLProgram *program = Find( name );
++	if( program != nullptr ) {
++		program->SetGenerator( generator );
++		if( renderSystem->IsOpenGLRunning() ) {
++			program->Destroy();
++		}
++		return program;
++	}
++
++	program = new GLSLProgram( name, generator );
++	programs.Append( program );
++	return program;
++}
++
++GLSLProgram * GLSLProgramManager::Find( const char *name ) {
++	for ( GLSLProgram *program : programs ) {
++		if ( program->GetName() == name ) {
++			return program;
++		}
++	}
++	return nullptr;
++}
++
++void GLSLProgramManager::Reload( const char *name ) {
++	GLSLProgram *program = Find( name );
++	if( program != nullptr ) {
++		program->Regenerate();
++	}
++}
++
++void GLSLProgramManager::ReloadAllPrograms() {
++	if ( uboHandle )
++		qglDeleteBuffers( 1, &uboHandle );
++	qglGenBuffers( 1, &uboHandle );
++	qglBindBuffer( GL_UNIFORM_BUFFER, uboHandle );
++	qglBindBufferBase( GL_UNIFORM_BUFFER, 0, uboHandle );
++	for( GLSLProgram *program : programs ) {
++		program->Regenerate();
++	}
++}
++
++
++// INITIALIZE BUILTIN PROGRAMS HERE
++
++namespace {
++	void InitInteractionShader( GLSLProgram *program ) {
++		idHashMapDict defines;
++		// TODO: set some defines based on cvars
++		defines.Set( "SOFT", "1" );
++		DefaultProgramInit( program, defines, "interaction.vs", "interaction.fs" );
++		program->Validate();
++	}
++
++	void InitDepthShader( GLSLProgram *program ) {
++		DefaultProgramInit( program, {}, "depthAlpha.vs", "depthAlpha.fs" );
++		program->Activate();
++		GLSLUniform_sampler( program, "u_tex0" ).Set( 0 );
++		program->GetUniformGroup<Uniforms::Global>()->textureMatrix.Set( mat4_identity );
++		program->Validate();
++	}
++
++	void InitFogShader( GLSLProgram *program ) {
++		DefaultProgramInit( program, {}, "fog.vs", "fog.fs" );
++		program->Activate();
++		GLSLUniform_sampler( program, "u_texture0" ).Set( 0 );
++		GLSLUniform_sampler( program, "u_texture1" ).Set( 1 );
++		program->GetUniformGroup<Uniforms::Global>()->textureMatrix.Set( mat4_identity );
++		program->Validate();
++	}
++
++	void InitOldStageShader( GLSLProgram *program ) {
++		DefaultProgramInit( program, {}, "oldStage.vs", "oldStage.fs" );
++		program->Activate();
++		GLSLUniform_sampler( program, "u_tex0" ).Set( 0 );
++		program->GetUniformGroup<Uniforms::Global>()->textureMatrix.Set( mat4_identity );
++		program->Validate();
++	}
++
++	void InitBlendShader( GLSLProgram *program ) {
++		DefaultProgramInit( program, {}, "blend.vs", "blend.fs" );
++		program->Activate();
++		GLSLUniform_sampler( program, "u_texture0" ).Set( 0 );
++		GLSLUniform_sampler( program, "u_texture1" ).Set( 1 );
++		program->GetUniformGroup<Uniforms::Global>()->textureMatrix.Set( mat4_identity );
++		program->Validate();
++	}
++
++	void InitShadowMapShader( GLSLProgram *program ) {
++		DefaultProgramInit( program, {}, program->GetName() + ".vs", program->GetName() + ".fs"/*, program->GetName() + ".gs"*/ );
++		Uniforms::Depth *depthUniforms = program->GetUniformGroup<Uniforms::Depth>();
++		depthUniforms->instances = 6;
++		depthUniforms->acceptsTranslucent = true; //duzenko: wait, what?
++		program->Validate();
++	}
++
++	void InitSoftParticleShader( GLSLProgram *program ) {
++		DefaultProgramInit( program, {}, program->GetName() + ".vs", program->GetName() + ".fs" );
++		program->Activate();
++		GLSLUniform_sampler( program, "u_texture0" ).Set( 0 );
++		GLSLUniform_sampler( program, "u_texture1" ).Set( 1 );
++		program->Validate();
++	}
++
++	void InitSamplerBindingsForBumpShaders( GLSLProgram *program ) {
++		GLSLUniform_sampler( program, "u_normalTexture" ).Set( 1 );
++		program->GetUniformGroup<Uniforms::Global>()->textureMatrix.Set( mat4_identity );
++}
++
++	GLSLProgram *LoadFromBaseNameWithCustomizer( const idStr &baseName, const std::function<void(GLSLProgram*)> customizer) {
++		return programManager->LoadFromGenerator( baseName, [=]( GLSLProgram *program ) {
++			idStr geometrySource = baseName + ".gs";
++			if( fileSystem->FindFile( idStr( "glprogs/" ) + baseName + ".gs" ) != FIND_NO ) {
++				DefaultProgramInit( program, {}, baseName + ".vs", baseName + ".fs", baseName + ".gs" );
++			} else {
++				DefaultProgramInit( program, {}, baseName + ".vs", baseName + ".fs", nullptr );
++			}
++			program->Activate();
++			customizer( program );
++			program->Validate();
++		});
++	}
++
++	GLSLProgram *LoadInteractionShader( const idStr &name, const idStr &baseName, bool ambient ) {
++		return programManager->LoadFromGenerator( name, [=]( GLSLProgram *program ) {
++			idHashMapDict defines;
++			DefaultProgramInit( program, defines, baseName + ".vs", baseName + ".fs" );
++			program->Activate();
++			Uniforms::Interaction *interactionUniforms = program->GetUniformGroup<Uniforms::Interaction>();
++			interactionUniforms->ambient = ambient;
++			// static bindings
++			interactionUniforms->normalTexture.Set( 0 );
++			interactionUniforms->lightFalloffTexture.Set( 1 );
++			interactionUniforms->lightProjectionTexture.Set( 2 );
++			interactionUniforms->diffuseTexture.Set( 3 );
++			interactionUniforms->specularTexture.Set( 4 );
++
++			// can't have sampler2D, usampler2D, samplerCube have the same TMU index
++			interactionUniforms->lightProjectionCubemap.Set( 5 );
++			interactionUniforms->shadowMap.Set( 6 );
++			interactionUniforms->stencilTexture.Set( 7 );
++			interactionUniforms->lightFalloffCubemap.Set( 8 );
++			program->Validate();
++		} );
++	}
++}
++
++void GLSLProgramManager::Init() {
++	cubeMapShader = LoadFromBaseNameWithCustomizer( "cubeMap", InitSamplerBindingsForBumpShaders );
++	bumpyEnvironment = LoadFromBaseNameWithCustomizer( "bumpyEnvironment", InitSamplerBindingsForBumpShaders );
++	depthShader = LoadFromGenerator( "depthAlpha" , InitDepthShader );
++	fogShader = LoadFromGenerator( "fog", InitFogShader );
++	oldStageShader = LoadFromGenerator( "oldStage", InitOldStageShader );
++	blendShader = LoadFromGenerator( "blend", InitBlendShader );
++	stencilShadowShader = Load( "stencilshadow" );
++	shadowMapShader = LoadFromGenerator( "shadowMapA", InitShadowMapShader );
++	shadowMapMultiShader = LoadFromGenerator( "shadowMapN", InitShadowMapShader );
++	shadowMapMultiGShader = LoadFromGenerator( "shadowMapNG", InitShadowMapShader );
++	ambientInteractionShader = LoadInteractionShader( "ambientInteraction", "ambientInteraction", true );
++	stencilInteractionShader = LoadInteractionShader( "interactionStencil", "interactionStencil", false );
++	shadowMapInteractionShader = LoadInteractionShader( "interactionShadowMaps", "interactionShadowMaps", false );
++	multiLightInteractionShader = LoadInteractionShader( "interactionMultiLight", "interactionMultiLight", false );
++	frobShader = Load( "frob" );
++	softParticleShader = LoadFromGenerator( "soft_particle", InitSoftParticleShader );
++	toneMapShader = Load( "tonemap" );
++	gaussianBlurShader = LoadFromFiles( "gaussian_blur", "fullscreen_tri.vert.glsl", "gaussian_blur.frag.glsl" );
++	volumetricLightShader = Load( "volumetric" );
++}
++
+diff --git a/renderer/GLSLProgramManager.h b/renderer/GLSLProgramManager.h
+index 0a5bc99b7..dbce1dffd 100644
+--- a/renderer/GLSLProgramManager.h
++++ b/renderer/GLSLProgramManager.h
+@@ -1,78 +1,79 @@
+-/*****************************************************************************
+-The Dark Mod GPL Source Code
+-
+-This file is part of the The Dark Mod Source Code, originally based
+-on the Doom 3 GPL Source Code as published in 2011.
+-
+-The Dark Mod Source Code is free software: you can redistribute it
+-and/or modify it under the terms of the GNU General Public License as
+-published by the Free Software Foundation, either version 3 of the License,
+-or (at your option) any later version. For details, see LICENSE.TXT.
+-
+-Project: The Dark Mod (http://www.thedarkmod.com/)
+-
+-******************************************************************************/
+-
+-#ifndef __GLSL_PROGRAM_MANAGER_H__
+-#define __GLSL_PROGRAM_MANAGER_H__
+-
+-class GLSLProgram;
+-
+-class GLSLProgramManager {
+-public:
+-	using Generator = std::function<void( GLSLProgram* )>;
+-
+-	GLSLProgramManager();
+-	~GLSLProgramManager();
+-
+-	void Init();
+-	void Shutdown();
+-
+-	// Load program by convention: assumes that the shader source files are named
+-	// <name>.fs, <name>.vs, <name>.gs and that the default attributes should be bound.
+-	GLSLProgram *Load( const idStr &name, const idHashMapDict &defines = {} );
+-
+-	// Load program from individually specified source files. Default attributes will be bound.
+-	GLSLProgram *LoadFromFiles( const idStr &name, const idStr &vertexSource, const idHashMapDict &defines = {} );
+-	GLSLProgram *LoadFromFiles( const idStr &name, const idStr &vertexSource, const idStr &fragmentSource, const idHashMapDict &defines = {} );
+-	GLSLProgram *LoadFromFiles( const idStr &name, const idStr &vertexSource, const idStr &fragmentSource, const idStr &geometrySource, const idHashMapDict &defines = {} );
+-
+-	// Register a GLSLProgram with a generating function.
+-	GLSLProgram *LoadFromGenerator( const char *name, const Generator &generator );
+-
+-	GLSLProgram *Find( const char *name );
+-
+-	void Reload( const char *name );
+-	void ReloadAllPrograms();
+-
+-	// global built-in shaders
+-	GLSLProgram* frobShader;
+-	GLSLProgram *softParticleShader;
+-	GLSLProgram* toneMapShader;
+-	GLSLProgram *cubeMapShader;
+-	GLSLProgram *bumpyEnvironment;
+-	GLSLProgram *depthShader;
+-	GLSLProgram *fogShader;
+-	GLSLProgram *oldStageShader;
+-	GLSLProgram *blendShader;
+-	GLSLProgram *stencilShadowShader;
+-	GLSLProgram *shadowMapShader;
+-	GLSLProgram *shadowMapMultiShader;
+-	GLSLProgram *shadowMapMultiGShader;
+-	GLSLProgram *ambientInteractionShader;
+-	GLSLProgram *stencilInteractionShader;
+-	GLSLProgram *shadowMapInteractionShader;
+-	GLSLProgram *multiLightInteractionShader;
+-	GLSLProgram *gaussianBlurShader;
+-	GLSLProgram* volumetricLightShader;
+-
+-	GLuint uboHandle;
+-
+-private:
+-	idList<GLSLProgram*> programs;
+-	int legacyTangentsCvarCallback;
+-};
+-
+-extern GLSLProgramManager *programManager;
+-
+-#endif
++/*****************************************************************************
++The Dark Mod GPL Source Code
++
++This file is part of the The Dark Mod Source Code, originally based
++on the Doom 3 GPL Source Code as published in 2011.
++
++The Dark Mod Source Code is free software: you can redistribute it
++and/or modify it under the terms of the GNU General Public License as
++published by the Free Software Foundation, either version 3 of the License,
++or (at your option) any later version. For details, see LICENSE.TXT.
++
++Project: The Dark Mod (http://www.thedarkmod.com/)
++
++******************************************************************************/
++
++#ifndef __GLSL_PROGRAM_MANAGER_H__
++#define __GLSL_PROGRAM_MANAGER_H__
++
++class GLSLProgram;
++
++class GLSLProgramManager {
++public:
++	using Generator = std::function<void( GLSLProgram* )>;
++
++	GLSLProgramManager();
++	~GLSLProgramManager();
++
++	void Init();
++	void Shutdown();
++
++	// Load program by convention: assumes that the shader source files are named
++	// <name>.fs, <name>.vs, <name>.gs and that the default attributes should be bound.
++	GLSLProgram *Load( const idStr &name, const idHashMapDict &defines = {} );
++
++	// Load program from individually specified source files. Default attributes will be bound.
++	GLSLProgram *LoadFromFiles( const idStr &name, const idStr &vertexSource, const idHashMapDict &defines = {} );
++	GLSLProgram *LoadFromFiles( const idStr &name, const idStr &vertexSource, const idStr &fragmentSource, const idHashMapDict &defines = {} );
++	GLSLProgram *LoadFromFiles( const idStr &name, const idStr &vertexSource, const idStr &fragmentSource, const idStr &geometrySource, const idHashMapDict &defines = {} );
++	GLSLProgram *LoadComputeShader( const idStr &name, const idStr &computeSource, const idHashMapDict &defines = {} );
++
++	// Register a GLSLProgram with a generating function.
++	GLSLProgram *LoadFromGenerator( const char *name, const Generator &generator );
++
++	GLSLProgram *Find( const char *name );
++
++	void Reload( const char *name );
++	void ReloadAllPrograms();
++
++	// global built-in shaders
++	GLSLProgram* frobShader;
++	GLSLProgram *softParticleShader;
++	GLSLProgram* toneMapShader;
++	GLSLProgram *cubeMapShader;
++	GLSLProgram *bumpyEnvironment;
++	GLSLProgram *depthShader;
++	GLSLProgram *fogShader;
++	GLSLProgram *oldStageShader;
++	GLSLProgram *blendShader;
++	GLSLProgram *stencilShadowShader;
++	GLSLProgram *shadowMapShader;
++	GLSLProgram *shadowMapMultiShader;
++	GLSLProgram *shadowMapMultiGShader;
++	GLSLProgram *ambientInteractionShader;
++	GLSLProgram *stencilInteractionShader;
++	GLSLProgram *shadowMapInteractionShader;
++	GLSLProgram *multiLightInteractionShader;
++	GLSLProgram *gaussianBlurShader;
++	GLSLProgram* volumetricLightShader;
++
++	GLuint uboHandle;
++
++private:
++	idList<GLSLProgram*> programs;
++	int legacyTangentsCvarCallback;
++};
++
++extern GLSLProgramManager *programManager;
++
++#endif
+diff --git a/renderer/RenderSystem_init.cpp b/renderer/RenderSystem_init.cpp
+index 9272f58cf..3ca82a9fd 100644
+--- a/renderer/RenderSystem_init.cpp
++++ b/renderer/RenderSystem_init.cpp
+@@ -79,7 +79,7 @@ idCVar r_ignoreGLErrors( "r_ignoreGLErrors",
+ #endif
+ 	, CVAR_RENDERER | CVAR_BOOL, "ignore GL errors" );
+ idCVar r_finish( "r_finish", "0", CVAR_RENDERER | CVAR_BOOL, "force a call to glFinish() every frame" );
+-idCVarInt r_swapInterval( "r_swapInterval", "0", CVAR_RENDERER | CVAR_ARCHIVE, "changes wglSwapIntarval" );
++idCVarInt r_swapInterval( "r_swapInterval", "0", CVAR_RENDERER | CVAR_ROM, "changes wglSwapIntarval" );
+
+ idCVar r_ambientMinLevel( "r_ambientMinLevel", "0", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_FLOAT, "specifies minimal level of ambient light brightness, making linear change in ambient color", 0.0f, 1.0f);
+ idCVar r_ambientGamma( "r_ambientGamma", "1", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_FLOAT, "specifies power of gamma correction applied solely to ambient light", 0.1f, 3.0f);
+@@ -149,7 +149,7 @@ idCVar r_flareSize( "r_flareSize", "1", CVAR_RENDERER | CVAR_FLOAT, "scale the f
+
+ idCVar r_useExternalShadows( "r_useExternalShadows", "1", CVAR_RENDERER | CVAR_INTEGER, "1 = skip drawing caps when outside the light volume", 0, 1, idCmdSystem::ArgCompletion_Integer<0, 1> );
+ idCVar r_useOptimizedShadows( "r_useOptimizedShadows", "1", CVAR_RENDERER | CVAR_BOOL, "use the dmap generated static shadow volumes" );
+-idCVar r_useScissor( "r_useScissor", "1", CVAR_RENDERER | CVAR_BOOL, "scissor clip as portals and lights are processed" );
++idCVar r_useScissor( "r_useScissor", "0", CVAR_RENDERER | CVAR_BOOL, "scissor clip as portals and lights are processed" );
+ idCVar r_useDepthBoundsTest( "r_useDepthBoundsTest", "1", CVAR_RENDERER | CVAR_BOOL, "use depth bounds test to reduce shadow fill" );
+
+ idCVar r_screenFraction( "r_screenFraction", "100", CVAR_RENDERER | CVAR_INTEGER, "for testing fill rate, the resolution of the entire screen can be changed" );
+diff --git a/renderer/backend/DepthStage.cpp b/renderer/backend/DepthStage.cpp
+index 6c47610cc..cfb6bc4d3 100644
+--- a/renderer/backend/DepthStage.cpp
++++ b/renderer/backend/DepthStage.cpp
+@@ -48,6 +48,13 @@ namespace {
+ 	}
+
+ 	void CalcScissorParam( uint32_t scissor[4], const idScreenRect &screenRect ) {
++		if ( !r_useScissor.GetBool() ) {
++			scissor[0] = scissor[1] = 0;
++			scissor[2] = frameBuffers->activeFbo->Width();
++			scissor[3] = frameBuffers->activeFbo->Height();
++			return;
++		}
++
+ 		float xScale = static_cast<float>(frameBuffers->activeFbo->Width()) / glConfig.vidWidth;
+ 		float yScale = static_cast<float>(frameBuffers->activeFbo->Height()) / glConfig.vidHeight;
+
+@@ -76,10 +83,13 @@ DepthStage::DepthStage( DrawBatchExecutor* drawBatchExecutor )
+ void DepthStage::Init() {
+ 	uint maxShaderParamsArraySize = drawBatchExecutor->MaxShaderParamsArraySize<ShaderParams>();
+ 	depthShader = programManager->LoadFromGenerator( "depth", [=](GLSLProgram *program) { LoadShader(program, maxShaderParamsArraySize, false); } );
+-
+ 	if( GLAD_GL_ARB_bindless_texture ) {
+ 		depthShaderBindless = programManager->LoadFromGenerator( "depth_bindless", [=](GLSLProgram *program) { LoadShader(program, maxShaderParamsArraySize, true); } );
+ 	}
++
++	idHashMapDict fastDefines;
++	fastDefines.Set( "MAX_SHADER_PARAMS", idStr::Fmt( "%d", drawBatchExecutor->MaxShaderParamsArraySize<idMat4>() ) );
++	fastDepthShader = programManager->LoadFromFiles( "depth_fast", "stages/depth/depth_fast.vert.glsl", "stages/depth/depth_fast.frag.glsl", fastDefines );
+ }
+
+ void DepthStage::Shutdown() {}
+@@ -124,38 +201,57 @@ void DepthStage::DrawDepth( const viewDef_t *viewDef, drawSurf_t **drawSurfs, in
+
+ 	BeginDrawBatch();
+
+-	bool subViewEnabled = false;
+ 	const drawSurf_t *curBatchCaches = drawSurfs[0];
+-	for ( int i = 0; i < numDrawSurfs; ++i ) {
+-		const drawSurf_t *drawSurf = drawSurfs[i];
+-		if ( !ShouldDrawSurf( drawSurf ) ) {
+-			continue;
+-		}
+-
+-		bool isSubView = drawSurf->material->GetSort() == SS_SUBVIEW;
+-		if( isSubView != subViewEnabled
+-				|| drawSurf->ambientCache.isStatic != curBatchCaches->ambientCache.isStatic
+-				|| drawSurf->indexCache.isStatic != curBatchCaches->indexCache.isStatic ) {
++	for ( const drawSurf_t *drawSurf : drawSurfs ) {
++		if ( drawSurf->ambientCache.isStatic != curBatchCaches->ambientCache.isStatic || drawSurf->indexCache.isStatic != curBatchCaches->indexCache.isStatic ) {
+ 			ExecuteDrawCalls();
+-			if( isSubView ) {
+-				GL_State( GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO | GLS_DEPTHFUNC_LESS );
+-			} else {
+-				GL_State( GLS_DEPTHFUNC_LESS );
+-			}
+-			subViewEnabled = isSubView;
+ 		}
+-
+ 		curBatchCaches = drawSurf;
+ 		DrawSurf( drawSurf );
+ 	}
+-
+ 	ExecuteDrawCalls();
++}
+
+-	// Make the early depth pass available to shaders. #3877
+-	if ( !viewDef->IsLightGem() && !r_skipDepthCapture.GetBool() ) {
+-		if ( !backEnd.viewDef->isSubview && !backEnd.viewDef->renderWorld->mapName.IsEmpty()) // compass
+-			frameBuffers->UpdateCurrentDepthCopy();
++void DepthStage::FastDepthPass( const idList<drawSurf_t *> drawSurfs, const viewDef_t *viewDef ) {
++	if ( drawSurfs.Num() == 0 ) {
++		return;
++	}
++
++	if ( r_ignore.GetBool() ) {
++		GenericDepthPass( drawSurfs, viewDef );
++		return;
+ 	}
++
++	fastDepthShader->Activate();
++
++	GL_State( GLS_DEPTHFUNC_LESS );
++
++	// Enable stencil test if we are going to be using it for shadows.
++	// If we didn't do this, it would be legal behavior to get z fighting
++	// from the ambient pass and the light passes.
++	qglEnable( GL_STENCIL_TEST );
++	qglStencilFunc( GL_ALWAYS, 1, 255 );
++
++	DrawBatch<idMat4> drawBatch = drawBatchExecutor->BeginBatch<idMat4>();
++	uint batchIdx = 0;
++
++	const drawSurf_t *curBatchCaches = drawSurfs[0];
++	for ( const drawSurf_t *surf : drawSurfs ) {
++		if ( batchIdx >= drawBatch.maxBatchSize
++				|| surf->ambientCache.isStatic != curBatchCaches->ambientCache.isStatic
++				|| surf->indexCache.isStatic != curBatchCaches->indexCache.isStatic ) {
++			drawBatchExecutor->ExecuteDrawVertBatch( batchIdx );
++			batchIdx = 0;
++			drawBatch = drawBatchExecutor->BeginBatch<idMat4>();
++		}
++
++		memcpy( drawBatch.shaderParams[batchIdx].ToFloatPtr(), surf->space->modelViewMatrix, sizeof(idMat4) );
++		drawBatch.surfs[batchIdx] = surf;
++		++batchIdx;
++		curBatchCaches = surf;
++	}
++
++	drawBatchExecutor->ExecuteDrawVertBatch( batchIdx );
+ }
+
+ bool DepthStage::ShouldDrawSurf(const drawSurf_t *surf) const {
+diff --git a/renderer/backend/DepthStage.h b/renderer/backend/DepthStage.h
+index e4e45741b..c1df8b50b 100644
+--- a/renderer/backend/DepthStage.h
++++ b/renderer/backend/DepthStage.h
+@@ -32,10 +32,15 @@ private:
+ 	DrawBatchExecutor *drawBatchExecutor;
+ 	GLSLProgram *depthShader = nullptr;
+ 	GLSLProgram *depthShaderBindless = nullptr;
++	GLSLProgram *fastDepthShader = nullptr;
+
+ 	uint currentIndex = 0;
+ 	DrawBatch<ShaderParams> drawBatch;
+
++	void PartitionSurfaces( drawSurf_t **drawSurfs, int numDrawSurfs, idList<drawSurf_t *> &subviewSurfs,
++			idList<drawSurf_t *> &opaqueSurfs, idList<drawSurf_t *> &remainingSurfs );
++	void GenericDepthPass( const idList<drawSurf_t *> drawSurfs, const viewDef_t *viewDef );
++	void FastDepthPass( const idList<drawSurf_t *> drawSurfs, const viewDef_t *viewDef );
+ 	bool ShouldDrawSurf( const drawSurf_t *surf ) const;
+ 	void DrawSurf( const drawSurf_t * drawSurf );
+ 	void CreateDrawCommands( const drawSurf_t *surf );
+diff --git a/renderer/backend/InteractionStage.cpp b/renderer/backend/InteractionStage.cpp
+index 82e04f739..a1d6113f7 100644
+--- a/renderer/backend/InteractionStage.cpp
++++ b/renderer/backend/InteractionStage.cpp
+@@ -175,15 +175,6 @@ void InteractionStage::DrawInteractions( viewLight_t *vLight, const drawSurf_t *
+ 	GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE | GLS_DEPTHMASK | alphaMask | backEnd.depthFunc );
+ 	backEnd.currentSpace = NULL; // ambient/interaction shaders conflict
+
+-	if ( r_useScissor.GetBool() && !backEnd.currentScissor.Equals( vLight->scissorRect ) ) {
+-		backEnd.currentScissor = vLight->scissorRect;
+-		GL_ScissorVidSize( backEnd.viewDef->viewport.x1 + backEnd.currentScissor.x1,
+-		            backEnd.viewDef->viewport.y1 + backEnd.currentScissor.y1,
+-		            backEnd.currentScissor.x2 + 1 - backEnd.currentScissor.x1,
+-		            backEnd.currentScissor.y2 + 1 - backEnd.currentScissor.y1 );
+-		GL_CheckErrors();
+-	}
+-
+ 	// bind the vertex and fragment program
+ 	ChooseInteractionProgram( vLight, interactionSurfs == backEnd.vLight->translucentInteractions );
+ 	InteractionUniforms *uniforms = interactionShader->GetUniformGroup<InteractionUniforms>();
+diff --git a/renderer/backend/RenderBackend.cpp b/renderer/backend/RenderBackend.cpp
+index 44b1511bb..cc5ba4f6c 100644
+--- a/renderer/backend/RenderBackend.cpp
++++ b/renderer/backend/RenderBackend.cpp
+@@ -222,9 +229,8 @@ void RenderBackend::DrawInteractionsWithStencilShadows( const viewDef_t *viewDef
+
+ 	// clear the stencil buffer if needed
+ 	if ( vLight->globalShadows || vLight->localShadows ) {
+-		backEnd.currentScissor = vLight->scissorRect;
+-
+-		if ( r_useScissor.GetBool() ) {
++		if ( !r_ignore2.GetBool() ) {
++			backEnd.currentScissor = vLight->scissorRect;
+ 			GL_ScissorVidSize( viewDef->viewport.x1 + backEnd.currentScissor.x1,
+ 			            viewDef->viewport.y1 + backEnd.currentScissor.y1,
+ 			            backEnd.currentScissor.x2 + 1 - backEnd.currentScissor.x1,
+@@ -242,6 +248,9 @@ void RenderBackend::DrawInteractionsWithStencilShadows( const viewDef_t *viewDef
+
+ 	if ( vLight->globalShadows ) {
+ 		stencilShadowStage.DrawStencilShadows( vLight, vLight->globalShadows );
++	backEnd.currentScissor = vLight->scissorRect;
++	FB_ApplyScissor();
++
+ 		if ( useShadowFbo && r_multiSamples.GetInteger() > 1 && r_softShadowsQuality.GetInteger() >= 0 ) {
+ 			frameBuffers->ResolveShadowStencilAA();
+ 		}
+@@ -258,6 +267,8 @@ void RenderBackend::DrawInteractionsWithStencilShadows( const viewDef_t *viewDef
+
+ 	if ( vLight->localShadows ) {
+ 		stencilShadowStage.DrawStencilShadows( vLight, vLight->localShadows );
++	backEnd.currentScissor = vLight->scissorRect;
++	FB_ApplyScissor();
+ 		if ( useShadowFbo && r_multiSamples.GetInteger() > 1 && r_softShadowsQuality.GetInteger() >= 0 ) {
+ 			frameBuffers->ResolveShadowStencilAA();
+ 		}
+@@ -269,6 +280,9 @@ void RenderBackend::DrawInteractionsWithStencilShadows( const viewDef_t *viewDef
+
+ 	interactionStage.DrawInteractions( vLight, vLight->globalInteractions );
+
++	GL_ScissorVidSize( viewDef->scissor.x1, viewDef->scissor.y1, viewDef->scissor.GetWidth(), viewDef->scissor.GetHeight() );
++	backEnd.currentScissor = viewDef->scissor;
++
+ 	GLSLProgram::Deactivate();
+ }
+
+@@ -276,7 +290,7 @@ void RenderBackend::DrawShadowsAndInteractions( const viewDef_t *viewDef ) {
+ 	TRACE_GL_SCOPE( "LightInteractions" );
+
+ 	if ( r_shadows.GetInteger() == 2 ) {
+-		if ( r_shadowMapSinglePass.GetBool() ) {
++		if ( r_shadowMapSinglePass.GetBool() && viewDef->updateShadowMap ) {
+ 			shadowMapStage.DrawShadowMap( viewDef );
+ 		}
+ 	}
+diff --git a/renderer/backend/ShadowMapStage.cpp b/renderer/backend/ShadowMapStage.cpp
+index 42c3d218a..52ea8cb5d 100644
+--- a/renderer/backend/ShadowMapStage.cpp
++++ b/renderer/backend/ShadowMapStage.cpp
+@@ -66,6 +66,10 @@ void ShadowMapStage::DrawShadowMap( const viewDef_t *viewDef ) {
+ 		qglEnable( GL_CLIP_PLANE0 + i );
+ 	}
+
++	GL_ViewportRelative( 0, 0, 1, 1 );
++	GL_ScissorRelative( 0, 0, 1, 1 );
++	qglClear( GL_DEPTH_BUFFER_BIT );
++
+ 	ShadowMapUniforms *shadowMapUniforms = shadowMapShader->GetUniformGroup<ShadowMapUniforms>();
+
+ 	for ( viewLight_t *vLight = viewDef->viewLights; vLight; vLight = vLight->next ) {
+@@ -81,10 +85,7 @@ void ShadowMapStage::DrawShadowMap( const viewDef_t *viewDef ) {
+
+ 		auto &page = ShadowAtlasPages[vLight->shadowMapIndex-1];
+ 		qglViewport( page.x, page.y, 6*page.width, page.width );
+-		if ( r_useScissor.GetBool() ) {
+-			qglScissor( page.x, page.y, 6*page.width, page.width );
+-		}
+-		qglClear( GL_DEPTH_BUFFER_BIT );
++		qglScissor( page.x, page.y, 6*page.width, page.width );
+ 		BeginDrawBatch();
+ 		DrawLightInteractions( vLight->globalInteractions );
+ 		DrawLightInteractions( vLight->localInteractions );
+@@ -98,6 +99,8 @@ void ShadowMapStage::DrawShadowMap( const viewDef_t *viewDef ) {
+ 	GL_Cull( CT_FRONT_SIDED );
+
+ 	frameBuffers->LeaveShadowMap();
++	GL_ViewportRelative( 0, 0, 1, 1 );
++	GL_ScissorRelative( 0, 0, 1, 1 );
+ }
+
+ float ShadowMapStage::GetEffectiveLightRadius( viewLight_t *vLight ) {
+diff --git a/renderer/backend/StencilShadowStage.cpp b/renderer/backend/StencilShadowStage.cpp
+index 54344d857..3f3c0b619 100644
+--- a/renderer/backend/StencilShadowStage.cpp
++++ b/renderer/backend/StencilShadowStage.cpp
+@@ -35,7 +35,6 @@ void StencilShadowStage::Init() {
+ 	defines.Set( "MAX_SHADER_PARAMS", idStr::Fmt("%d", drawBatchExecutor->MaxShaderParamsArraySize<ShaderParams>()) );
+ 	stencilShadowShader = programManager->LoadFromFiles( "stencil_shadow",
+ 		"stages/stencil/stencil_shadow.vert.glsl",
+-		"stages/stencil/stencil_shadow.frag.glsl",
+ 		defines );
+ }
+
+@@ -54,9 +53,6 @@ void StencilShadowStage::DrawStencilShadows( viewLight_t *vLight, const drawSurf
+ 	GL_State( GLS_DEPTHMASK | GLS_COLORMASK | GLS_ALPHAMASK | GLS_DEPTHFUNC_LESS );
+ 	qglStencilFunc( GL_ALWAYS, 1, 255 );
+
+-	if ( glConfig.depthBoundsTestAvailable && r_useDepthBoundsTest.GetBool() ) {
+-		qglEnable( GL_DEPTH_BOUNDS_TEST_EXT );
+-	}
+ 	GL_Cull( CT_TWO_SIDED );
+ 	stencilShadowShader->Activate();
+
+@@ -89,9 +85,6 @@ void StencilShadowStage::DrawStencilShadows( viewLight_t *vLight, const drawSurf
+ 	if ( r_shadowPolygonFactor.GetFloat() || r_shadowPolygonOffset.GetFloat() ) {
+ 		qglDisable( GL_POLYGON_OFFSET_FILL );
+ 	}
+-	if ( glConfig.depthBoundsTestAvailable && r_useDepthBoundsTest.GetBool() ) {
+-		qglDisable( GL_DEPTH_BOUNDS_TEST_EXT );
+-	}
+ 	qglStencilOp( GL_KEEP, GL_KEEP, GL_KEEP );
+ 	// FIXME: move to interaction stage
+ 	if ( !r_softShadowsQuality.GetBool() || backEnd.viewDef->IsLightGem() /*|| r_shadows.GetInteger()==2 && backEnd.vLight->tooBigForShadowMaps*/ )
+diff --git a/renderer/draw_common.cpp b/renderer/draw_common.cpp
+index 1b71eb03a..f3aee6e11 100644
+--- a/renderer/draw_common.cpp
++++ b/renderer/draw_common.cpp
+@@ -397,9 +397,16 @@ void RB_STD_T_RenderShaderPasses_OldStage( const shaderStage_t *pStage, const dr
+ 	// bind the texture
+ 	RB_BindVariableStageImage( &pStage->texture, regs );
+
+-	// set the state
+ 	GL_State( pStage->drawStateBits );
+
++	// VR hack: since fonts and other things in GUIs render semi-transparently and this transparency
++	// carries on to the UI overlay, try to ensure that the alpha channel is set to full to keep stuff readable
++	if (surf->material->GetSort() == SS_DECAL && backEnd.viewDef->viewEntitys == nullptr) {
++		qglBlendColor(1, 1, 1, 1);
++		qglBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_CONSTANT_ALPHA, GL_CONSTANT_ALPHA);
++	}
++
++
+ 	// draw it
+ 	RB_DrawElementsWithCounters( surf );
+
+diff --git a/renderer/draw_glsl.cpp b/renderer/draw_glsl.cpp
+index 8aca69075..9e6fecebe 100644
+--- a/renderer/draw_glsl.cpp
++++ b/renderer/draw_glsl.cpp
+@@ -40,7 +40,7 @@ struct ShadowMapUniforms : GLSLUniformGroup {
+ 
+ GLSLProgram *currrentInteractionShader; // dynamic, either pointInteractionShader or ambientInteractionShader
+ 
+-idCVarInt r_shadowMapSinglePass( "r_shadowMapSinglePass", "0", CVAR_ARCHIVE | CVAR_RENDERER, "1 - render shadow maps for all lights in a single pass; 2 - also render all light interactions in a single pass" );
++idCVarInt r_shadowMapSinglePass( "r_shadowMapSinglePass", "1", CVAR_ARCHIVE | CVAR_RENDERER, "1 - render shadow maps for all lights in a single pass; 2 - also render all light interactions in a single pass" );
+
+ static void ChooseInteractionProgram() {
+ 	if ( backEnd.vLight->lightShader->IsAmbientLight() ) {
+@@ -281,8 +281,7 @@ void RB_GLSL_DrawInteractions_ShadowMap( const drawSurf_t *surf, bool clear = fa
+
+ 	auto &page = ShadowAtlasPages[backEnd.vLight->shadowMapIndex-1];
+ 	qglViewport( page.x, page.y, 6*page.width, page.width );
+-	if ( r_useScissor.GetBool() )
+-		qglScissor( page.x, page.y, 6*page.width, page.width );
++	qglScissor( page.x, page.y, 6*page.width, page.width );
+ 	if ( clear )
+ 		qglClear( GL_DEPTH_BUFFER_BIT );
+ 	for ( int i = 0; i < 4; i++ )
+@@ -318,6 +317,8 @@ void RB_GLSL_DrawInteractions_ShadowMap( const drawSurf_t *surf, bool clear = fa
+ 	GLSLProgram::Deactivate();
+ 
+ 	frameBuffers->LeaveShadowMap();
++	GL_ViewportRelative( 0, 0, 1, 1 );
++	GL_ScissorRelative( 0, 0, 1, 1 );
+ 
+ 	GL_CheckErrors();
+ }
+@@ -746,6 +747,7 @@ void Uniforms::MaterialStage::Set(const shaderStage_t *pStage, const drawSurf_t
+ 			parm[2] = regs[newStage->vertexParms[i][2]];
+ 			parm[3] = regs[newStage->vertexParms[i][3]];
+ 	 		localParams[ i ]->Set( parm );
++			eyeToHead.Set( backEnd.viewDef->eyeToHead.ToFloatPtr() );
+ 		}
+
+ 		//setting textures
+diff --git a/renderer/glsl.h b/renderer/glsl.h
+index e03de70b7..32ec39ee7 100644
+--- a/renderer/glsl.h
++++ b/renderer/glsl.h
+@@ -192,6 +192,8 @@ namespace Uniforms {
+
+ 		GLSLUniform_sampler *textures[8] = { &texture0, &texture1, &texture2, &texture3, &texture4, &texture5, &texture6, &texture7 };
+
++		DEFINE_UNIFORM( mat4, eyeToHead )
++
+ 		//note: also binds fragmentProgramImages to texture units
+ 		void Set( const shaderStage_t *pStage, const drawSurf_t *surf );
+ 	};
+diff --git a/renderer/qgl.h b/renderer/qgl.h
+index c3ddf3aab..c8b322623 100644
+--- a/renderer/qgl.h
++++ b/renderer/qgl.h
+@@ -42,6 +42,10 @@ Project: The Dark Mod (http://www.thedarkmod.com/)
+ #define GL_ARB_multi_draw_indirect				1	//core since 4.3
+ #define GL_ARB_vertex_attrib_binding			1	//core since 4.3
+ #define GL_ARB_bindless_texture					1
++#define GL_NV_shading_rate_image				1
++#define GL_ARB_texture_storage					1
++#define GL_ARB_compute_shader					1	//core since 4.3
++#define GL_ARB_shader_image_load_store			1	//core since 4.2
+ #include "glad.h"
+
+ #ifdef _WIN32
+@@ -53,6 +57,8 @@ Project: The Dark Mod (http://www.thedarkmod.com/)
+ #define WGL_ARB_pixel_format					1
+ // Optional extensions:
+ #define WGL_EXT_swap_control					1
++#define WGL_NV_DX_interop						1
++#define WGL_NV_DX_interop2						1
+ #include "glad_wgl.h"
+ #endif

@@ -1533,7 +1533,7 @@ void R_TuneDown_f( const idCmdArgs& args ) {
 	r_skipInteractions.SetInteger( undo ? 0 : 2 );
 	r_skipPostProcess.SetInteger( !undo );
 	r_shadows.SetInteger( undo );
-	r_tonemap.SetInteger( undo );
+	r_tonemap.SetBool( undo );
 	r_skipSubviews.SetInteger( !undo );
 	r_skipParticles.SetInteger( !undo );
 	r_ambientMinLevel.SetFloat( undo ? 0 : 0.5 );

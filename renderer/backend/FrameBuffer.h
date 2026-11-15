@@ -81,7 +81,7 @@ extern idCVarBool r_fboSRGB;
 extern idCVar r_fboDepthBits;
 extern idCVarInt r_shadowMapSize;
 extern idCVar r_fboResolution;
-extern idCVar r_tonemap;
+extern idCVarBool r_tonemap;
 
 void FB_RenderTexture( idImage *texture );
 void FB_DebugShowContents();
