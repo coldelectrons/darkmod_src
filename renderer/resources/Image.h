@@ -398,9 +398,6 @@ public:
 		return ImageFromSource( strname, ImageAssetSource{ strname, cubeMap, nullptr }, filter, allowDownSize, repeat, depth, residency );
 	}
 
-	// The callback will be issued immediately, and later if images are reloaded or vid_restart
-	// The callback function should call one of the idImage::Generate* functions to fill in the data
-	idImage *			ImageFromFunction( const char *name, void ( *generatorFunction )( idImage *image ) );
 	// The callback will be issued when image is generated, and later if images are reloaded or vid_restart
 	// The callback function returns CPU-side uncompressed data for the image, with ownership over memory passed to the caller
 	idImageAsset *		ImageFromFunction( const char *name, imageBlock_t ( *generatorFunction )(),

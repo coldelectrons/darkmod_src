@@ -28,52 +28,60 @@ idCVar vr_foveatedMidRadius("vr_foveatedMidRadius", "0.75", CVAR_FLOAT|CVAR_REND
 idCVar vr_foveatedOuterRadius("vr_foveatedOuterRadius", "0.85", CVAR_FLOAT|CVAR_RENDERER|CVAR_ARCHIVE, "Outer foveated radius to render at quarter resolution - anything outside is rendered at 1/16th resolution");
 idCVar vr_foveatedReconstructionQuality("vr_foveatedReconstructionQuality", "2", CVAR_INTEGER|CVAR_RENDERER|CVAR_ARCHIVE, "The quality of the reconstruction for foveated rendering");
 
-static imageBlock_t R_CreateVariableRateShadingImage( idImage* image ) {
-	int eye = image->imgName == "vrsImage0" ? 0 : 1;
-	image->type = TT_2D;
-	image->uploadWidth = frameBuffers->renderWidth;
-	image->uploadHeight = frameBuffers->renderHeight;
-	qglGenTextures( 1, &image->texnum );
-	qglBindTexture( GL_TEXTURE_2D, image->texnum );
 
-	GLint texelW, texelH;
-	qglGetIntegerv( GL_SHADING_RATE_IMAGE_TEXEL_WIDTH_NV, &texelW );
-	qglGetIntegerv( GL_SHADING_RATE_IMAGE_TEXEL_HEIGHT_NV, &texelH );
-	GLsizei imageWidth = image->uploadWidth / texelW;
-	GLsizei imageHeight = image->uploadHeight / texelH;
-	idVec2 centerUV = vrBackend->ProjectCenterUV( eye );
-	GLsizei centerX = imageWidth * centerUV.x;
-	GLsizei centerY = imageHeight * centerUV.y;
-	float outerRadius = vr_foveatedOuterRadius.GetFloat() * 0.5f * imageHeight;
-	float midRadius = vr_foveatedMidRadius.GetFloat() * 0.5f * imageHeight;
-	float innerRadius = vr_foveatedInnerRadius.GetFloat() * 0.5f * imageHeight;
+// XXX This is a damn annoyance
+// 1 - the function doesn't fit the func type for ImageFromFunction
+// 2 - even in fholger's code, WTF does it get the *image from?
+// 3 - even in fholger's code, WTF does it get the *frameBuffers from?
+//		!! this is probably extern FrameBufferManager* frameBuffers
+// static imageBlock_t R_CreateVariableRateShadingImageFunc( int eye ) {
+static imageBlock_t(void*) R_CreateVariableRateShadingImageFunc( int eye ) {
+	return [eye](void)->imageBlock_t {
+		char* name[] = eye ? "vrsImage1" : "vrsImage0";
+		idImage* image = globalImages->ImageScratch(name);
+		image->uploadWidth = frameBuffers->renderWidth;
+		image->uploadHeight = frameBuffers->renderHeight;
+		qglGenTextures( 1, &image->texnum );
+		qglBindTexture( GL_TEXTURE_2D, image->texnum );
 
-	// idList<byte> vrsData;
-	// vrsData.SetNum( imageWidth * imageHeight );
-	imageBlock_t res = imageBlock_t::Alloc2D(imageWidth, imageHeight);
-	for ( int y = 0; y < imageHeight; ++y ) {
-		for ( int x = 0; x < imageWidth; ++x ) {
-			float distFromCenter = idMath::Sqrt( (x-centerX)*(x-centerX) + (y-centerY)*(y-centerY));
-			if ( distFromCenter >= outerRadius) {
-				vrsData[y*imageWidth + x] = 3;
-			} else if ( distFromCenter >= midRadius) {
-				vrsData[y*imageWidth + x] = 2;
-			} else if ( distFromCenter >= innerRadius) {
-				vrsData[y*imageWidth + x] = 1;
-			} else {
-				vrsData[y*imageWidth + x] = 0;
+		GLint texelW, texelH;
+		qglGetIntegerv( GL_SHADING_RATE_IMAGE_TEXEL_WIDTH_NV, &texelW );
+		qglGetIntegerv( GL_SHADING_RATE_IMAGE_TEXEL_HEIGHT_NV, &texelH );
+		GLsizei imageWidth = image->uploadWidth / texelW;
+		GLsizei imageHeight = image->uploadHeight / texelH;
+		idVec2 centerUV = vrBackend->ProjectCenterUV( eye );
+		GLsizei centerX = imageWidth * centerUV.x;
+		GLsizei centerY = imageHeight * centerUV.y;
+		float outerRadius = vr_foveatedOuterRadius.GetFloat() * 0.5f * imageHeight;
+		float midRadius =   vr_foveatedMidRadius.GetFloat() * 0.5f * imageHeight;
+		float innerRadius = vr_foveatedInnerRadius.GetFloat() * 0.5f * imageHeight;
+
+		idList<byte> vrsData;
+		vrsData.SetNum( imageWidth * imageHeight );
+		for ( int y = 0; y < imageHeight; ++y ) {
+			for ( int x = 0; x < imageWidth; ++x ) {
+				float distFromCenter = idMath::Sqrt( (x-centerX)*(x-centerX) + (y-centerY)*(y-centerY));
+				if ( distFromCenter >= outerRadius) {
+					vrsData[y*imageWidth + x] = 3;
+				} else if ( distFromCenter >= midRadius) {
+					vrsData[y*imageWidth + x] = 2;
+				} else if ( distFromCenter >= innerRadius) {
+					vrsData[y*imageWidth + x] = 1;
+				} else {
+					vrsData[y*imageWidth + x] = 0;
+				}
 			}
 		}
-	}
 
-	qglTexStorage2D( GL_TEXTURE_2D, 1, GL_R8UI, imageWidth, imageHeight );
-	qglTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, imageWidth, imageHeight, GL_RED_INTEGER, GL_UNSIGNED_BYTE, vrsData.Ptr() );
+		qglTexStorage2D( GL_TEXTURE_2D, 1, GL_R8UI, imageWidth, imageHeight );
+		qglTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, imageWidth, imageHeight, GL_RED_INTEGER, GL_UNSIGNED_BYTE, vrsData.Ptr() );
 
-	GL_SetDebugLabel( GL_TEXTURE, image->texnum, image->imgName );
+		GL_SetDebugLabel( GL_TEXTURE, image->texnum, image->imgName );
 
-	imageBlock_t res = imageBlock_t::Alloc2D( imageWidth, imageHeight );
-	memcpy( res.pic[0], vrsData, sizeof(data) );
-	return res;
+		imageBlock_t res = imageBlock_t::Alloc2D( imageWidth, imageHeight );
+		memcpy( res.pic[0], vrsData, sizeof(data) );
+		return res;
+	};
 }
 
 struct RadialDensityMaskUniforms : GLSLUniformGroup {
@@ -102,8 +110,8 @@ static imageBlock_t R_CreateReconstructionImage(  ) {
 }
 void VRFoveatedRendering::Init() {
 	if ( GLAD_GL_NV_shading_rate_image ) {
-		variableRateShadingImage[0] = globalImages->ImageFromFunction( "vrsImage0", R_CreateVariableRateShadingImage, TF_DEFAULT, false, TR_CLAMP, TD_HIGH_QUALITY, IR_GRAPHICS );
-		variableRateShadingImage[1] = globalImages->ImageFromFunction( "vrsImage1", R_CreateVariableRateShadingImage, TF_DEFAULT, false, TR_CLAMP, TD_HIGH_QUALITY, IR_GRAPHICS );
+		variableRateShadingImage[0] = globalImages->ImageFromFunction( "vrsImage0", R_CreateVariableRateShadingImageFunc(0), TF_DEFAULT, false, TR_CLAMP, TD_HIGH_QUALITY, IR_GRAPHICS );
+		variableRateShadingImage[1] = globalImages->ImageFromFunction( "vrsImage1", R_CreateVariableRateShadingImageFunc(1), TF_DEFAULT, false, TR_CLAMP, TD_HIGH_QUALITY, IR_GRAPHICS );
 	}
 	rdmReconstructionImage = globalImages->ImageFromFunction( "rdm_reconstruct", R_CreateReconstructionImage, TF_DEFAULT, false, TR_CLAMP, TD_HIGH_QUALITY, IR_GRAPHICS );
 	rdmReconstructionFbo = frameBuffers->CreateFromGenerator( "rdm_reconstruction_fbo", [this](FrameBuffer *fbo) {
